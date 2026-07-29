@@ -3,16 +3,10 @@ import {
   Box, Drawer, DrawerBody, DrawerContent, DrawerOverlay,
   Flex, IconButton, Input, Text, useDisclosure,
 } from '@chakra-ui/react';
-import { keyframes } from '@emotion/react';
 import { BOOT_LINES, COMMANDS, C, dim, err } from '../data/terminalCommands';
 
 const PROMPT = 'HALP://$ ';
 const MAX_INPUT = 120;
-
-const blink = keyframes`
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-`;
 
 function TermLine({ color, text }) {
   return (
@@ -36,14 +30,11 @@ export default function MissionTerminal() {
   const [busy,    setBusy]    = useState(false);
   const [history, setHistory] = useState([]);
   const [histIdx, setHistIdx] = useState(-1);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [lines]);
-
-  useEffect(() => {
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 100);
-  }, [isOpen]);
 
   const push = (newLines) => setLines((prev) => [...prev, ...newLines]);
 
@@ -142,19 +133,18 @@ export default function MissionTerminal() {
                 value={input}
                 onChange={(e) => setInput(e.target.value.slice(0, MAX_INPUT))}
                 onKeyDown={handleKeyDown}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 isDisabled={busy}
                 variant="unstyled"
-                fontFamily="mono" fontSize="xs"
+                fontFamily="mono" fontSize={{ base: '16px', md: 'xs' }}
                 color={C.green} caretColor={C.green}
                 flex={1}
-                _placeholder={{ color: C.dim }}
-                placeholder={busy ? 'Processing...' : ''}
+                _placeholder={{ color: C.dim, fontSize: '0.85em' }}
+                placeholder={busy ? 'Processing...' : isFocused ? '' : "Type 'help'..."}
                 spellCheck={false}
                 autoComplete="off"
               />
-              {!input && !busy && (
-                <Box w="8px" h="13px" bg={C.green} flexShrink={0} animation={`${blink} 1s step-end infinite`} />
-              )}
             </Flex>
           </DrawerBody>
         </DrawerContent>
