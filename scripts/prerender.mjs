@@ -69,6 +69,20 @@ for (const [route, meta] of Object.entries(routeMeta)) {
     'og:url',
     route
   );
+  html = replaceTag(
+    html,
+    /<meta\s+name="twitter:title"[\s\S]*?\/>/,
+    `<meta name="twitter:title" content="${title}" />`,
+    'twitter:title',
+    route
+  );
+  html = replaceTag(
+    html,
+    /<meta\s+name="twitter:description"[\s\S]*?\/>/,
+    `<meta name="twitter:description" content="${description}" />`,
+    'twitter:description',
+    route
+  );
 
   let headExtras = `<link rel="canonical" href="${url}" />`;
   if (route === '/') {
@@ -78,6 +92,8 @@ for (const [route, meta] of Object.entries(routeMeta)) {
       '@type': 'WebSite',
       name: SITE_NAME,
       url: `${SITE_URL}/`,
+      description: meta.description,
+      sameAs: ['https://github.com/ABowSEC/Project-Ephemeris'],
     });
     headExtras += `\n    <script type="application/ld+json">${ld}</script>`;
   }

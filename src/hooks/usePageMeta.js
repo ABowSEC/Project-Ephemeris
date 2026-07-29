@@ -26,6 +26,8 @@ export function usePageMeta(path) {
     setContent('meta[property="og:title"]', title);
     setContent('meta[property="og:description"]', meta.description);
     setContent('meta[property="og:url"]', url);
+    setContent('meta[name="twitter:title"]', title);
+    setContent('meta[name="twitter:description"]', meta.description);
 
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) {

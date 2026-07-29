@@ -14,7 +14,6 @@ import {
   Image,
   IconButton,
   Divider,
-  Link,
   Badge,
   AspectRatio,
   Container,
@@ -47,6 +46,17 @@ import ErrorState from "../components/ErrorState";
 const pulse = keyframes`
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
+`;
+
+// Slow opacity breathe for the hero watermark; deliberately its own
+// keyframes rather than reusing `pulse` (that one swings 1 <-> 0.4, tuned
+// for a small fully-opaque status dot, not a large low-opacity watermark -
+// animating opacity overrides a static opacity prop on the same element
+// rather than multiplying with it, so the intended low-opacity range has to
+// be baked into the keyframes directly).
+const breathe = keyframes`
+  0%, 100% { opacity: 0.14; }
+  50%       { opacity: 0.30; }
 `;
 
 // Compact live next-launch panel for the hero; shares the app-wide cached
@@ -526,11 +536,13 @@ export default function Home() {
           overflow="hidden"
           p={{ base: 8, md: 12 }}
         >
-          {/* Emblem watermark; screen blend melts its black field into the card.
-              Centered while the hero is stacked (below lg) so the card's
-              overflow clip never crops it at mid-size windows. */}
+          {/* Emblem watermark: the logo, static (no rotation/reshaping),
+              breathing slowly in place. Screen blend melts its black field
+              into the card, same as the original watermark. Centered while
+              the hero is stacked (below lg) so the card's overflow clip
+              never crops it at mid-size windows. */}
           <Image
-            src="/icons/mission-emblem.png"
+            src="/icons/icon-512.png"
             alt=""
             aria-hidden="true"
             position="absolute"
@@ -538,10 +550,13 @@ export default function Home() {
             top="50%"
             transform={{ base: "translate(50%, -50%)", lg: "translateY(-50%)" }}
             boxSize={{ base: "360px", md: "460px" }}
-            opacity={0.22}
+            opacity={prefersReducedMotion ? 0.22 : undefined}
             mixBlendMode="screen"
             pointerEvents="none"
             draggable={false}
+            sx={{
+              animation: prefersReducedMotion ? undefined : `${breathe} 6s ease-in-out infinite`,
+            }}
           />
 
           <Flex
