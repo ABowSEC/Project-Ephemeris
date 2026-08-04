@@ -11,6 +11,9 @@ export default defineConfig({
       // is limited to the app shell and icons, with everything else cached
       // at runtime on first use.
       workbox: {
+        // Custom worker code the generateSW template has no hook for. Right
+        // now: making launch-alert notifications open the launch they are about.
+        importScripts: ['/sw-notifications.js'],
         // icon-* and apple-touch only: the full-size source logos in
         // public/icons are ~1 MB each and cached at runtime instead
         globPatterns: ['**/*.{js,css,html}', 'icons/icon-*.png', 'icons/apple-touch-icon.png', '*.svg'],

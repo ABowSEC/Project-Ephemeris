@@ -1,0 +1,34 @@
+{
+  // Incremental TypeScript adoption. The existing .jsx files stay exactly as
+  // they are: allowJs lets them keep resolving, checkJs: false means tsc never
+  // reports on them. New code is written in .ts/.tsx and is fully strict, so
+  // the type boundary sits at the new modules rather than sprawling into a
+  // half-migrated codebase.
+  //
+  // functions/ is excluded here — Pages Functions run on the Workers runtime,
+  // not the DOM, and have their own tsconfig with @cloudflare/workers-types.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "functions", "src/wasm"]
+}

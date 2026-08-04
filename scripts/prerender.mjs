@@ -33,8 +33,15 @@ function replaceTag(html, pattern, replacement, label, route) {
   return html.replace(pattern, replacement);
 }
 
+// Parameterized routes (/launches/:slug) can't be stamped at build time — the
+// set of slugs changes daily, long after a build. A Pages Function does it at
+// the edge instead (functions/launches/[slug].ts). Skipping them here also
+// stops a literal `dist/launches/:slug/` directory being written.
+const isParameterized = (route) => route.includes(':');
+
 let count = 0;
 for (const [route, meta] of Object.entries(routeMeta)) {
+  if (isParameterized(route)) continue;
   const title = escapeHtml(meta.full ? meta.title : `${meta.title} · ${SITE_NAME}`);
   const description = escapeHtml(meta.description);
   const url = SITE_URL + (route === '/' ? '/' : route);
@@ -107,7 +114,7 @@ for (const [route, meta] of Object.entries(routeMeta)) {
 
 const today = new Date().toISOString().slice(0, 10);
 const sitemapEntries = Object.entries(routeMeta)
-  .filter(([, meta]) => !meta.hidden)
+  .filter(([route, meta]) => !meta.hidden && !isParameterized(route))
   .map(([route]) => {
     const url = SITE_URL + (route === '/' ? '/' : route);
     return `  <url>\n    <loc>${url}</loc>\n    <lastmod>${today}</lastmod>\n  </url>`;

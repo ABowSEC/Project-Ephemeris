@@ -33,6 +33,7 @@ import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 // Leaflet on /iss) stay out of the initial bundle and load on demand.
 const Home = lazy(() => import('./pages/Home'));
 const LaunchPage = lazy(() => import('./pages/LaunchPage'));
+const LaunchDetailPage = lazy(() => import('./pages/LaunchDetailPage'));
 const LaunchMapPage = lazy(() => import('./pages/LaunchMapPage'));
 const MarsPage = lazy(() => import('./pages/MarsPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
@@ -69,6 +70,12 @@ const navigationItems = [
   { path: '/explore',  label: 'Explore' },
   { path: '/iss',      label: 'ISS' },
 ];
+
+// Exact match everywhere except for sections with child routes: a launch
+// detail page at /launches/<slug> should still light up the Launches tab.
+// '/' is exact-only or it would match every route.
+const isActiveNav = (pathname, path) =>
+  pathname === path || (path !== '/' && pathname.startsWith(`${path}/`));
 
 // /solarsim is intentionally unlisted // reachable via the Konami code
 // (see KonamiWarp below) or a direct link, as a hidden easter egg.
@@ -122,7 +129,7 @@ function Navigation() {
           {/* Inline links: desktop only; small screens use the drawer */}
           <HStack spacing={1} display={{ base: 'none', md: 'flex' }}>
             {navigationItems.map(({ path, label }) => {
-              const isActive = location.pathname === path;
+              const isActive = isActiveNav(location.pathname, path);
               return (
                 <Link
                   key={path}
@@ -190,7 +197,7 @@ function Navigation() {
           <DrawerBody>
             <VStack align="stretch" spacing={1}>
               {navigationItems.map(({ path, label }) => {
-                const isActive = location.pathname === path;
+                const isActive = isActiveNav(location.pathname, path);
                 return (
                   <Link
                     key={path}
@@ -265,6 +272,7 @@ function AnimatedRoutes() {
             <Route path="/"          element={<Home />} />
             <Route path="/explore"   element={<ExplorePage />} />
             <Route path="/launches"  element={<LaunchPage />} />
+            <Route path="/launches/:slug" element={<LaunchDetailPage />} />
             <Route path="/map"       element={<LaunchMapPage />} />
             <Route path="/mars"      element={<MarsPage />} />
             <Route path="/iss"       element={<ISSLivePage />} />

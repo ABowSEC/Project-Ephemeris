@@ -18,11 +18,24 @@ Without a key the app falls back to NASA's shared `DEMO_KEY` (about 30 requests/
 npm run build     # production build to dist/
 npm run preview   # serve the build locally
 npm run lint
+npm run typecheck # tsc over src/ and functions/
 ```
+
+Cloudflare Pages Functions (the launch API proxy, per-launch social metadata,
+and the launch sitemap) do not run under `npm run dev`. To exercise those:
+
+```bash
+npm run build && npx wrangler pages dev dist
+```
+
+The `crates/orbital` WebAssembly module is optional: `npm run build` compiles it
+when a Rust toolchain and `wasm-pack` are installed and skips it with a warning
+otherwise, in which case launch-lighting details are simply hidden.
 
 ## Features
 
-- **Launch tracker**: upcoming launches worldwide with live countdowns, status, and mission details
+- **Launch tracker**: upcoming launches worldwide with live countdowns, status, search, and filters
+- **Launch pages**: a permanent URL per mission (`/launches/<slug>`) with the official webcast or replay, curator-written mission updates, weather and hold reasons, launch statistics, and per-launch social previews rendered at the edge
 - **World launch map**: every scheduled launch site on an interactive dark map
 - **Favorites and alerts**: star launches to track them; T-60m / T-10m / liftoff notifications while the app is open
 - **Calendar export**: add any launch to Google Calendar or download an .ics file
@@ -34,7 +47,9 @@ npm run lint
 
 ## Stack
 
-React 18, Vite, Chakra UI, React Router (code-split routes), Framer Motion, Three.js, Leaflet + MapLibre GL, vite-plugin-pwa.
+React 18, Vite, Chakra UI, React Router (code-split routes), Framer Motion, Three.js, Leaflet + MapLibre GL, vite-plugin-pwa. Deployed on Cloudflare Pages, with Pages Functions for the cached Launch Library proxy and edge-rendered metadata.
+
+TypeScript is being adopted incrementally: new code is written in `.ts`/`.tsx` under `strict`, while existing `.jsx` continues to work unchecked via `allowJs`. `crates/orbital` is a Rust crate compiled to WebAssembly for solar and observer geometry — currently launch lighting, and the foundation for ISS pass prediction.
 
 ## Data Sources
 

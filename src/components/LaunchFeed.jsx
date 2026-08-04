@@ -1,201 +1,96 @@
-import { useEffect, useState } from "react";
+import { useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
-  Box,
-  Text,
-  VStack,
-  HStack,
-  Badge,
-  Spinner,
   Alert,
+  AlertDescription,
   AlertIcon,
   AlertTitle,
-  AlertDescription,
-  SimpleGrid,
-  Image,
-  Icon,
+  Badge,
+  Box,
   Button,
-  Collapse,
-  Divider,
-  Flex,
-  Link,
-} from "@chakra-ui/react";
-import {
-  ExternalLinkIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from "@chakra-ui/icons";
-import { FaYoutube, FaRegCalendarPlus, FaGoogle, FaStar } from 'react-icons/fa';
+  HStack,
+  Image,
+  LinkBox,
+  LinkOverlay,
+  SimpleGrid,
+  Spinner,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches';
-import { useFavorites } from '../hooks/useFavorites';
-import { downloadIcs, googleCalendarUrl } from '../utils/calendar';
+import LaunchFilters from './LaunchFilters';
+import { useLaunchFilters } from '../hooks/useLaunchFilters';
 import TrackButton from './TrackButton';
 import ErrorState from './ErrorState';
+import { statusStyle } from '../data/launchStatus';
+import { formatNet, launchPath, launchTime, providerName } from '../utils/launchFields';
+import { useCountdown } from '../hooks/useCountdown';
 
 const MotionBox = motion(Box);
 const MotionImage = motion(Image);
 
-/**
- * Countdown Timer Component
- * Displays real-time countdown to launch
- */
-function CountdownTimer({ launchTime }) {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  });
-  const [isLaunched, setIsLaunched] = useState(false);
+// How many cards to show before the "show more" button. The feed holds 50, and
+// rendering all of them on a phone is a lot of images for a list most people
+// scan the top of.
+const PAGE_SIZE = 12;
 
-  useEffect(() => {
-    // Returns false once launched so the caller can stop ticking
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const launchDate = new Date(launchTime).getTime();
-      const difference = launchDate - now;
+const AGENCY_LOGOS = {
+  NASA: '/logos/nasa.jpg',
+  SpaceX: '/logos/spacex.jpeg',
+  ULA: '/logos/ula.jpg',
+  ESA: '/logos/esa.jpg',
+  JAXA: '/logos/jaxa.jpg',
+  'Russian Federal Space Agency (ROSCOSMOS)': '/logos/Roscosmos.jpg',
+  'China Aerospace Science and Technology Corporation': '/logos/casc.jpg',
+  'Blue Origin': '/logos/blueorigin.jpg',
+};
 
-      if (difference <= 0) {
-        setIsLaunched(true);
-        return false;
-      }
+const agencyLogo = (agency) => AGENCY_LOGOS[agency] ?? '/logos/defaultAgency.jpg';
 
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+/** Compact T-minus line for a card. The full clock lives on the detail page. */
+function CardCountdown({ launch }) {
+  const countdown = useCountdown(launchTime(launch));
 
-      setTimeLeft({ days, hours, minutes, seconds });
-      return true;
-    };
-
-    if (!calculateTimeLeft()) return;
-
-    const timer = setInterval(() => {
-      if (!calculateTimeLeft()) clearInterval(timer);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [launchTime]);
-
-  if (isLaunched) {
+  if (!countdown) {
     return (
-      <Badge colorScheme="green" px={3} py={1} borderRadius="full">
-        Launched!
-      </Badge>
+      <Text fontSize="sm" fontFamily="mono" color="text.secondary">
+        {formatNet(launch)}
+      </Text>
     );
   }
 
-  const units = [
-    ...(timeLeft.days > 0 ? [{ value: timeLeft.days, label: "Days" }] : []),
-    { value: timeLeft.hours, label: "Hours" },
-    { value: timeLeft.minutes, label: "Min" },
-    { value: timeLeft.seconds, label: "Sec" },
-  ];
+  // Seconds only matter once the launch is close enough to watch for
+  const parts = countdown.d > 0
+    ? [`${countdown.d}d`, `${countdown.h}h`, `${countdown.m}m`]
+    : [`${countdown.h}h`, `${countdown.m}m`, `${String(countdown.s).padStart(2, '0')}s`];
 
-  // Glowing digit tiles — pad to two figures so the row doesn't jitter.
   return (
-    <HStack spacing={2} justify="center" wrap="wrap">
-      {units.map(({ value, label }) => (
-        <VStack
-          key={label}
-          spacing={0}
-          minW="58px"
-          py={2}
-          borderRadius="lg"
-          bg="bg.elevated"
-          border="1px solid"
-          borderColor="border.default"
-        >
-          <Text
-            fontSize="2xl"
-            fontWeight="bold"
-            lineHeight="1.1"
-            fontFamily="mono"
-            color="accent.terminal"
-            textShadow="0 0 12px rgba(0,255,157,0.5)"
-          >
-            {String(value).padStart(2, "0")}
-          </Text>
-          <Text fontSize="10px" letterSpacing="wider" textTransform="uppercase" color="text.secondary">
-            {label}
-          </Text>
-        </VStack>
-      ))}
-    </HStack>
+    <Text fontSize="sm" fontFamily="mono" color="accent.terminal" letterSpacing="wide">
+      T- {parts.join(' ')}
+    </Text>
   );
 }
 
 /**
- * Launch Status Badge Component
- * Shows the current status of a launch
- */
-function LaunchStatusBadge({ status }) {
-  const getStatusConfig = (status) => {
-    const statusMap = {
-      'TBD': { color: 'gray', text: 'To Be Determined' },
-      'TBC': { color: 'gray', text: 'To Be Confirmed' },
-      'GO': { color: 'green', text: 'Go for Launch' },
-      'NO-GO': { color: 'red', text: 'No Go' },
-      'SUCCESS': { color: 'green', text: 'Success' },
-      'FAILURE': { color: 'red', text: 'Failure' },
-      'PARTIAL_FAILURE': { color: 'orange', text: 'Partial Failure' },
-      'HOLD': { color: 'yellow', text: 'Hold' },
-      'IN_FLIGHT': { color: 'blue', text: 'In Flight' },
-      'EXPENDED': { color: 'purple', text: 'Expended' }
-    };
-    
-    return statusMap[status] || { color: 'gray', text: status };
-  };
-
-  const config = getStatusConfig(status);
-  
-  return (
-    <Badge colorScheme={config.color} px={3} py={1} borderRadius="full">
-      {config.text}
-    </Badge>
-  );
-}
-
-/**
- * Individual Launch Card Component
+ * One launch in the list.
+ *
+ * The card used to expand in place to reveal mission details, calendar links,
+ * and a webcast button. All of that now lives at /launches/<slug>, which is
+ * linkable, shareable, and previews properly when posted — so the card's only
+ * job is to identify the launch and get you there.
  */
 function LaunchCard({ launch, index = 0, reduceMotion = false }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    });
-  };
-  const getAgencyLogo = (agency) => {
-    if (!agency) return "/logos/defaultAgency.jpg";
-    const logos = {
-      'NASA': "/logos/nasa.jpg",
-      'SpaceX': "/logos/spacex.jpeg",
-      'ULA': "/logos/ula.jpg",
-      'ESA': "/logos/esa.jpg",
-      'JAXA': "/logos/jaxa.jpg",
-      'Russian Federal Space Agency (ROSCOSMOS)': "/logos/Roscosmos.jpg",
-      'China Aerospace Science and Technology Corporation': "/logos/casc.jpg",
-      'Blue Origin': "/logos/blueorigin.jpg",
-    };
-    return logos[agency] || "/logos/defaultAgency.jpg";
-  };
+  const style = statusStyle(launch.status);
+  const provider = providerName(launch);
 
   return (
-    <MotionBox
+    <LinkBox
+      as={MotionBox}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.5, ease: "easeOut", delay: (index % 2) * 0.08 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.5, ease: 'easeOut', delay: (index % 2) * 0.08 }}
       whileHover={reduceMotion ? undefined : { y: -4 }}
       bg="bg.card"
       border="1px solid"
@@ -206,11 +101,10 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }) {
       position="relative"
       role="group"
       _hover={{
-        shadow: "0 12px 32px -12px var(--chakra-colors-blue-500)",
-        borderColor: "blue.400",
+        shadow: '0 12px 32px -12px var(--chakra-colors-blue-500)',
+        borderColor: 'blue.400',
       }}
     >
-      {/* Gradient accent rail across the top */}
       <Box
         position="absolute"
         top={0}
@@ -221,38 +115,37 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }) {
         zIndex={3}
       />
 
-      {/* Hero: full-bleed mission image with the identity overlaid on a scrim.
-          Falls back to a brand gradient when the API gives us no image. */}
-      <Box position="relative" h={{ base: "210px", md: "230px" }} overflow="hidden">
+      <Box position="relative" h={{ base: '190px', md: '210px' }} overflow="hidden">
         {launch.image ? (
           <MotionImage
             src={launch.image}
-            alt={launch.name}
+            alt=""
             w="100%"
             h="100%"
             objectFit="cover"
             fallback={<Box h="100%" bgGradient="linear(to-br, blue.900, purple.900)" />}
             transition="transform 0.7s ease"
-            _groupHover={reduceMotion ? undefined : { transform: "scale(1.06)" }}
+            _groupHover={reduceMotion ? undefined : { transform: 'scale(1.06)' }}
           />
         ) : (
           <Box h="100%" w="100%" bgGradient="linear(to-br, blue.900, purple.900)" />
         )}
 
-        {/* Scrim so overlaid text stays legible over any image */}
         <Box
           position="absolute"
           inset={0}
           bg="linear-gradient(to bottom, rgba(11,17,32,0.15) 0%, rgba(11,17,32,0.15) 45%, rgba(11,17,32,0.92) 100%)"
         />
 
-        {/* Track + status, top-right */}
-        <HStack position="absolute" top={3} right={3} spacing={2} zIndex={2}>
+        {/* The track button sits above the overlay so starring a launch doesn't
+            navigate to it. LinkOverlay covers the rest of the card. */}
+        <HStack position="absolute" top={3} right={3} spacing={2} zIndex={3}>
           <TrackButton launch={launch} />
-          <LaunchStatusBadge status={launch.status?.name} />
+          <Badge colorScheme={style.colorScheme} px={3} py={1} borderRadius="full">
+            {style.label}
+          </Badge>
         </HStack>
 
-        {/* Identity, bottom-left */}
         <HStack
           position="absolute"
           bottom={0}
@@ -271,174 +164,53 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }) {
             flexShrink={0}
           >
             <Image
-              src={getAgencyLogo(launch.launch_service_provider?.name)}
-              alt={`${launch.launch_service_provider?.name ?? 'Agency'} logo`}
-              boxSize="44px"
+              src={agencyLogo(provider)}
+              alt=""
+              boxSize="40px"
               objectFit="contain"
               fallbackSrc="/logos/defaultAgency.jpg"
             />
           </Box>
           <VStack align="start" spacing={0.5} flex={1} minW={0}>
-            <Text
-              fontSize="lg"
-              fontWeight="bold"
-              color="white"
-              lineHeight="1.2"
-              noOfLines={2}
-              textShadow="0 1px 6px rgba(0,0,0,0.7)"
-            >
-              {launch.name}
-            </Text>
+            <LinkOverlay as={RouterLink} to={launchPath(launch)}>
+              <Text
+                fontSize="lg"
+                fontWeight="bold"
+                color="white"
+                lineHeight="1.2"
+                noOfLines={2}
+                textShadow="0 1px 6px rgba(0,0,0,0.7)"
+              >
+                {launch.name}
+              </Text>
+            </LinkOverlay>
             <Text fontSize="sm" color="whiteAlpha.800" noOfLines={1}>
-              {launch.launch_service_provider?.name || 'Unknown Agency'}
+              {provider ?? 'Unknown provider'}
             </Text>
           </VStack>
         </HStack>
       </Box>
 
-      {/* Body */}
-      <VStack spacing={4} align="stretch" p={6}>
-        {/* Countdown Timer */}
-        <Box textAlign="center" py={4}>
-          <Text fontSize="sm" color="text.secondary" mb={2}>
-            Launch Window Opens
+      <VStack spacing={2} align="stretch" px={5} py={4}>
+        <HStack justify="space-between" align="baseline" spacing={3}>
+          <CardCountdown launch={launch} />
+          <Text fontSize="xs" color="text.secondary" noOfLines={1} textAlign="right">
+            {launch.pad?.location?.name ?? launch.pad?.name ?? 'Site TBD'}
           </Text>
-          <CountdownTimer launchTime={launch.window_start} />
-        </Box>
-
-        {/* Basic Info */}
-        <SimpleGrid columns={[1, 2]} spacing={4}>
-          <Box>
-            <Text fontSize="sm" color="text.secondary">Launch Date</Text>
-            <Text fontWeight="medium">{formatDate(launch.window_start)}</Text>
-          </Box>
-          <Box>
-            <Text fontSize="sm" color="text.secondary">Launch Site</Text>
-            <Text fontWeight="medium">{launch.pad?.name || 'TBD'}</Text>
-            {launch.pad?.location?.name && (
-              <Text fontSize="xs" color="text.secondary" mt={0.5}>
-                {launch.pad.location.name}
-              </Text>
-            )}
-          </Box>
-        </SimpleGrid>
-
-        <Button
-          size="sm"
-          variant="ghost"
-          alignSelf="center"
-          onClick={() => setIsExpanded(!isExpanded)}
-          rightIcon={isExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
-        >
-          {isExpanded ? 'Less detail' : 'More detail'}
-        </Button>
-
-        {/* Expanded Details */}
-        <Collapse in={isExpanded}>
-          <VStack spacing={4} align="stretch" pt={4}>
-            <Divider />
-            
-            {launch.mission?.description && (
-              <Box>
-                <Text fontSize="sm" color="text.secondary" mb={2}>Mission Description</Text>
-                <Text fontSize="md" lineHeight="1.6">
-                  {launch.mission.description}
-                </Text>
-              </Box>
-            )}
-
-            <SimpleGrid columns={[1, 2]} spacing={4}>
-              {launch.rocket?.configuration?.name && (
-                <Box>
-                  <Text fontSize="sm" color="text.secondary">Rocket</Text>
-                  <Text fontWeight="medium">{launch.rocket.configuration.name}</Text>
-                </Box>
-              )}
-              
-              {launch.mission?.orbit?.name && (
-                <Box>
-                  <Text fontSize="sm" color="text.secondary">Target Orbit</Text>
-                  <Text fontWeight="medium">{launch.mission.orbit.name}</Text>
-                </Box>
-              )}
-            </SimpleGrid>
-
-            {launch.mission?.type && (
-              <Box>
-                <Text fontSize="sm" color="text.secondary">Mission Type</Text>
-                <Text fontWeight="medium">{launch.mission.type}</Text>
-              </Box>
-            )}
-
-            <HStack spacing={3} wrap="wrap">
-              {launch.pad?.map_url && (
-                <Button
-                  as={Link}
-                  href={launch.pad.map_url}
-                  isExternal
-                  size="sm"
-                  leftIcon={<ExternalLinkIcon />}
-                  colorScheme="teal"
-                  variant="outline"
-                >
-                  View on Map
-                </Button>
-              )}
-
-              {launch.vid_urls?.length > 0 && (
-                <Button
-                  as={Link}
-                  href={launch.vid_urls[0].url}
-                  isExternal
-                  size="sm"
-                  leftIcon={<Icon as={FaYoutube} />}
-                  colorScheme="red"
-                  variant="outline"
-                >
-                  Watch Live
-                </Button>
-              )}
-
-              <Button
-                size="sm"
-                leftIcon={<Icon as={FaRegCalendarPlus} />}
-                colorScheme="brand"
-                variant="outline"
-                onClick={() => downloadIcs(launch)}
-              >
-                Add to Calendar
-              </Button>
-
-              <Button
-                as={Link}
-                href={googleCalendarUrl(launch)}
-                isExternal
-                size="sm"
-                leftIcon={<Icon as={FaGoogle} />}
-                colorScheme="blue"
-                variant="outline"
-              >
-                Google Calendar
-              </Button>
-            </HStack>
-          </VStack>
-        </Collapse>
+        </HStack>
+        <Text fontSize="xs" color="text.secondary">
+          {formatNet(launch)}
+        </Text>
       </VStack>
-    </MotionBox>
+    </LinkBox>
   );
 }
 
-/**
- * Main LaunchFeed Component
- */
-function LaunchFeed() {
-  const { launches: allLaunches, loading, error, refetch } = useUpcomingLaunches();
-  const { favorites } = useFavorites();
-  const [filter, setFilter] = useState('all');
+export default function LaunchFeed() {
+  const { launches, loading, error, refetch } = useUpcomingLaunches();
+  const filters = useLaunchFilters(launches);
+  const [visible, setVisible] = useState(PAGE_SIZE);
   const reduceMotion = useReducedMotion();
-
-  const tracked = allLaunches.filter((l) => favorites.includes(l.id));
-  const launches = filter === 'tracked' ? tracked : allLaunches.slice(0, 10);
 
   if (loading) {
     return (
@@ -450,69 +222,60 @@ function LaunchFeed() {
   }
 
   if (error) {
-    return (
-      <ErrorState
-        title="Error loading launches!"
-        message={error}
-        onRetry={refetch}
-      />
-    );
+    return <ErrorState title="Error loading launches!" message={error} onRetry={refetch} />;
   }
+
+  const shown = filters.filtered.slice(0, visible);
 
   return (
     <VStack spacing={6} align="stretch">
-      {/* All / Tracked filter */}
-      <HStack spacing={2}>
-        <Button
-          size="sm"
-          variant={filter === 'all' ? 'solid' : 'outline'}
-          onClick={() => setFilter('all')}
-        >
-          All
-        </Button>
-        <Button
-          size="sm"
-          variant={filter === 'tracked' ? 'solid' : 'outline'}
-          colorScheme="orange"
-          leftIcon={<Icon as={FaStar} boxSize={3} />}
-          onClick={() => setFilter('tracked')}
-        >
-          Tracked{tracked.length > 0 ? ` (${tracked.length})` : ''}
-        </Button>
-      </HStack>
+      <LaunchFilters state={filters} />
 
-      {launches.length === 0 ? (
+      {shown.length === 0 ? (
         <Alert status="info" borderRadius="lg">
           <AlertIcon />
-          <AlertTitle>
-            {filter === 'tracked' ? 'No tracked launches' : 'No upcoming launches found'}
-          </AlertTitle>
-          <AlertDescription>
-            {filter === 'tracked'
-              ? 'Star a launch to follow it here and get countdown alerts.'
-              : 'Check back later for new launch schedules.'}
-          </AlertDescription>
+          <Box>
+            <AlertTitle>
+              {filters.activeCount > 0 ? 'No launches match these filters' : 'No upcoming launches found'}
+            </AlertTitle>
+            <AlertDescription>
+              {filters.activeCount > 0
+                ? 'Try widening the timeframe or clearing a filter.'
+                : 'Check back later for new launch schedules.'}
+            </AlertDescription>
+          </Box>
         </Alert>
       ) : (
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-          {launches.map((launch, index) => (
-            <LaunchCard
-              key={launch.id}
-              launch={launch}
-              index={index}
-              reduceMotion={reduceMotion}
-            />
-          ))}
-        </SimpleGrid>
+        <>
+          <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
+            {shown.map((launch, index) => (
+              <LaunchCard
+                key={launch.id}
+                launch={launch}
+                index={index}
+                reduceMotion={reduceMotion}
+              />
+            ))}
+          </SimpleGrid>
+
+          {filters.filtered.length > shown.length && (
+            <Button
+              alignSelf="center"
+              variant="outline"
+              colorScheme="brand"
+              onClick={() => setVisible((n) => n + PAGE_SIZE)}
+            >
+              Show more ({filters.filtered.length - shown.length} remaining)
+            </Button>
+          )}
+        </>
       )}
 
-      <Box textAlign="center" pt={4}>
+      <Box textAlign="center" pt={2}>
         <Text fontSize="sm" color="text.secondary">
-          Showing {launches.length} {filter === 'tracked' ? 'tracked' : 'upcoming'} launches · Data from The Space Devs API
+          Showing {shown.length} of {filters.filtered.length} launches · Data from The Space Devs API
         </Text>
       </Box>
     </VStack>
   );
 }
-
-export default LaunchFeed;
