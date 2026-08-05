@@ -4,6 +4,10 @@ dist/
 build/
 .vite/
 
+# Wrangler's local dev state and generated worker bundle
+# (created by `npx wrangler pages dev dist`)
+.wrangler/
+
 # Env files
 .env
 .env.local

@@ -14,7 +14,7 @@
 // Note this only runs on Cloudflare — `npm run dev` has no Functions runtime,
 // so use `npx wrangler pages dev dist` to see it work.
 
-import { readCached, type Ll2Context } from '../_shared/ll2Cache';
+import { NotFoundError, resolveCached, type Ll2Context } from '../_shared/ll2Cache';
 import { isValidSlug, launchBySlugOptions } from '../_shared/launchLookup';
 // Shared with the SPA and the build-time prerenderer so the site name and
 // canonical origin are defined exactly once. routeMeta.js is deliberately
@@ -142,14 +142,23 @@ export async function onRequestGet(context: Ll2Context): Promise<Response> {
     return new Response(shell.body, { status: 404, headers: shell.headers });
   }
 
-  const launch = await readCached<LaunchDetailed>(context, launchBySlugOptions(slug));
-
-  // readCached returns null for both "no such launch" and "upstream is down",
-  // and the two want different answers. Distinguishing them would cost a second
-  // lookup, so err toward the recoverable reading: serve the unmodified shell
-  // at 200 and let the SPA render from its own cache. A transient Space Devs
-  // outage must not tell Google that a real launch page is gone.
-  if (!launch) {
+  // "No such launch" and "upstream is down" need different answers, and
+  // resolveCached distinguishes them by throwing NotFoundError only for the
+  // former. (An earlier version used readCached, which flattens every failure
+  // to null — that made well-formed but nonexistent slugs return 200, leaving
+  // them indexable.)
+  let launch: LaunchDetailed | null = null;
+  try {
+    const { body } = await resolveCached(context, launchBySlugOptions(slug));
+    launch = JSON.parse(body) as LaunchDetailed;
+  } catch (err) {
+    if (err instanceof NotFoundError) {
+      // Upstream is certain this launch does not exist: tell crawlers so.
+      return new Response(shell.body, { status: 404, headers: shell.headers });
+    }
+    // Upstream trouble, which is recoverable. Serve the unmodified shell at
+    // 200 and let the SPA render from its own cache — a transient Space Devs
+    // outage must not tell Google that a real launch page is gone.
     return new Response(shell.body, { status: 200, headers: shell.headers });
   }
 
@@ -188,6 +197,17 @@ export async function onRequestGet(context: Ll2Context): Promise<Response> {
       },
     });
   }
+
+  // The shell is dist/index.html, which scripts/prerender.mjs already stamped
+  // with the *homepage's* canonical and its WebSite JSON-LD. Appending ours on
+  // top left two canonical tags on every launch page, the first pointing at
+  // the site root — conflicting signals that a crawler resolves by picking one
+  // arbitrarily or ignoring both. Strip the inherited pair, then append.
+  rewriter = rewriter.on('link[rel="canonical"], script[type="application/ld+json"]', {
+    element(el) {
+      el.remove();
+    },
+  });
 
   rewriter = rewriter.on('head', {
     element(el) {
