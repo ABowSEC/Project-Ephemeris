@@ -1,7 +1,14 @@
 <!doctype html>
-<html lang="en">
+<!-- color-scheme is declared on the element itself, not just in CSS, so the
+     browser knows this is a dark document before any stylesheet loads. It
+     governs the parts of the UI Chakra can't reach: scrollbars, form control
+     chrome, autofill backgrounds, and the canvas painted before first render.
+     Without it, a visitor whose browser is set to light gets light scrollbars
+     and a white flash against an otherwise dark app. -->
+<html lang="en" style="color-scheme: dark">
   <head>
     <meta charset="UTF-8" />
+    <meta name="color-scheme" content="dark" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
     <link rel="icon" type="image/png" href="/icons/icon-64.png" />

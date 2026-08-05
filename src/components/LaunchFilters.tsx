@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Button,
   HStack,
@@ -5,26 +6,43 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
-  Select,
   Text,
   Wrap,
   WrapItem,
 } from '@chakra-ui/react';
 import { CloseIcon, SearchIcon } from '@chakra-ui/icons';
 import { FaStar } from 'react-icons/fa';
+import FilterSelect from './FilterSelect';
 import { FILTERABLE_STATUSES } from '../data/launchStatus';
 import type { LaunchFilterState } from '../hooks/useLaunchFilters';
 
+// The first entry of each list is the "no filter" state, and FilterSelect
+// falls back to it when nothing is selected.
 const TIMEFRAMES = [
+  { value: 'all', label: 'All upcoming' },
   { value: '7', label: 'Next 7 days' },
   { value: '30', label: 'Next 30 days' },
   { value: '90', label: 'Next 90 days' },
-  { value: 'all', label: 'All upcoming' },
+];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'Any status' },
+  ...FILTERABLE_STATUSES.map(({ abbrev, label }) => ({ value: abbrev, label })),
 ];
 
 /** The controls themselves. State comes from useLaunchFilters. */
 export default function LaunchFilters({ state }: { state: LaunchFilterState }) {
   const { values, setFilter, reset, providers, trackedCount, activeCount, filtered, total } = state;
+
+  // providers is rebuilt whenever the feed changes; this keeps the option
+  // array stable between those changes.
+  const providerOptions = useMemo(
+    () => [
+      { value: '', label: 'All providers' },
+      ...providers.map((provider) => ({ value: provider, label: provider })),
+    ],
+    [providers]
+  );
 
   return (
     <>
@@ -39,68 +57,37 @@ export default function LaunchFilters({ state }: { state: LaunchFilterState }) {
               onChange={(e) => setFilter('q', e.target.value)}
               placeholder="Search missions, rockets, providers"
               borderRadius="md"
-              bg="bg.card"
-              borderColor="border.default"
               aria-label="Search launches"
             />
           </InputGroup>
         </WrapItem>
 
         <WrapItem>
-          <Select
-            size="sm"
-            borderRadius="md"
-            bg="bg.card"
-            borderColor="border.default"
+          <FilterSelect
+            label="provider"
             value={values.provider}
-            onChange={(e) => setFilter('provider', e.target.value)}
-            aria-label="Filter by provider"
+            options={providerOptions}
+            onChange={(value) => setFilter('provider', value)}
             maxW="220px"
-          >
-            <option value="">All providers</option>
-            {providers.map((provider) => (
-              <option key={provider} value={provider}>
-                {provider}
-              </option>
-            ))}
-          </Select>
+          />
         </WrapItem>
 
         <WrapItem>
-          <Select
-            size="sm"
-            borderRadius="md"
-            bg="bg.card"
-            borderColor="border.default"
+          <FilterSelect
+            label="status"
             value={values.status}
-            onChange={(e) => setFilter('status', e.target.value)}
-            aria-label="Filter by status"
-          >
-            <option value="">Any status</option>
-            {FILTERABLE_STATUSES.map(({ abbrev, label }) => (
-              <option key={abbrev} value={abbrev}>
-                {label}
-              </option>
-            ))}
-          </Select>
+            options={STATUS_OPTIONS}
+            onChange={(value) => setFilter('status', value)}
+          />
         </WrapItem>
 
         <WrapItem>
-          <Select
-            size="sm"
-            borderRadius="md"
-            bg="bg.card"
-            borderColor="border.default"
+          <FilterSelect
+            label="timeframe"
             value={values.days}
-            onChange={(e) => setFilter('days', e.target.value)}
-            aria-label="Filter by timeframe"
-          >
-            {TIMEFRAMES.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
+            options={TIMEFRAMES}
+            onChange={(value) => setFilter('days', value)}
+          />
         </WrapItem>
 
         <WrapItem>

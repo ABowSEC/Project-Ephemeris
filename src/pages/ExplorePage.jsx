@@ -228,7 +228,6 @@ export default function ExplorePage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              bg="bg.card"
               borderRadius="md"
               boxShadow="md"
             />
