@@ -154,12 +154,12 @@ export const timelineData = [
     status: "success",
   },
   {
-    year: "2025",
+    year: "2026",
     title: "Artemis II — First Crewed Lunar Flyby Since Apollo",
-    description: "Four astronauts will fly aboard Orion on a free-return trajectory around the Moon — the first humans to travel to lunar distance in over 50 years — validating life support systems ahead of the Artemis III landing.",
-    link: "https://www.nasa.gov/specials/artemis/",
+    description: "Reid Wiseman, Victor Glover, Christina Koch, and CSA's Jeremy Hansen flew Orion on a free-return trajectory around the Moon, splashing down after ten days. At 252,756 miles out they set the record for the farthest humans have ever travelled from Earth.",
+    link: "https://www.nasa.gov/mission/artemis-ii/",
     type: "moon",
-    status: "planned",
+    status: "success",
   },
   {
     year: "2026",
