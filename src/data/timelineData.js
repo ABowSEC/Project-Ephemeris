@@ -163,10 +163,10 @@ export const timelineData = [
   },
   {
     year: "2027",
-    title: "Artemis III — First Woman on the Moon",
-    description: "Planned to land the first woman and first person of color on the lunar South Pole, a region of scientific interest for its permanently shadowed craters believed to hold water ice deposits.",
-    link: "https://www.nasa.gov/specials/artemis/",
-    type: "moon",
+    title: "Artemis III — Docking Test in Earth Orbit",
+    description: "Restructured in 2026 from a lunar landing into a two-week low Earth orbit test flight. Orion will rendezvous and dock with pathfinder versions of both commercial landers — Blue Origin's Blue Moon first, then SpaceX's Starship — proving the crewed docking each will need before a landing is attempted.",
+    link: "https://www.nasa.gov/mission/artemis-iii/",
+    type: "crewed",
     status: "planned",
   },
 ];
