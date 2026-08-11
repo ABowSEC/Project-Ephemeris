@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
 
 /**
+ * @typedef {{ d: number, h: number, m: number, s: number }} TimeLeft
+ */
+
+/**
  * Ticking countdown to a timestamp. Returns { d, h, m, s } updated every
  * second, or null when the target is missing or already passed.
+ *
+ * @param {string | Date | null | undefined} targetTime
+ * @returns {TimeLeft | null}
  */
 export function useCountdown(targetTime) {
+  // Annotated so TypeScript callers see the union rather than inferring `null`
+  // from the initial value alone.
+  /** @type {[TimeLeft | null, (value: TimeLeft | null) => void]} */
   const [timeLeft, setTimeLeft] = useState(null);
 
   useEffect(() => {

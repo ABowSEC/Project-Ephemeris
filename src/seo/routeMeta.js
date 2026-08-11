@@ -21,6 +21,15 @@ export const routeMeta = {
     description:
       'Every upcoming rocket launch with live countdowns: SpaceX, NASA, ULA, Rocket Lab, and more. Track missions, get alerts, and export launches to your calendar.',
   },
+  // Parameterized: no fixed metadata. Direct visits and crawlers get per-launch
+  // tags from the edge (functions/launches/[slug].ts); usePageMeta takes an
+  // override for SPA navigation. Listed here so the route is documented in one
+  // place with the others — prerender.mjs and the sitemap skip ':' routes.
+  '/launches/:slug': {
+    title: 'Launch Details',
+    description:
+      'Live countdown, official webcast, mission updates, and launch statistics for a single rocket launch.',
+  },
   '/map': {
     title: 'World Launch Map',
     description:

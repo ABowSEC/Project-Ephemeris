@@ -1,3 +1,4 @@
+import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Heading,
@@ -8,100 +9,29 @@ import {
   Icon,
   Badge,
   Flex,
+  Link,
   Spinner,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { FaRocket, FaMapMarkerAlt, FaSatellite } from "react-icons/fa";
 import LaunchFeed from "../components/LaunchFeed";
 import AlertSettings from "../components/AlertSettings";
+import CountdownDisplay from "../components/launch/CountdownDisplay";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
-import { useCountdown } from "../hooks/useCountdown";
 import { usePageMeta } from "../hooks/usePageMeta";
-
-const STATUS_COLORS = {
-  "Go for Launch": "green",
-  "To Be Confirmed": "yellow",
-  "To Be Determined": "gray",
-  "Launch Successful": "green",
-  "Launch Failure": "red",
-  "On Hold": "orange",
-};
+import { statusStyle } from "../data/launchStatus";
+import { formatNet, launchPath, providerName, rocketName } from "../utils/launchFields";
 
 const pulseAnim = keyframes`
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
 `;
 
-function CountdownBlock({ value, label }) {
-  return (
-    <VStack spacing={0} align="center">
-      <Box
-        bg="rgba(0,255,157,0.05)"
-        border="1px solid"
-        borderColor="rgba(0,255,157,0.25)"
-        rounded="lg"
-        px={{ base: 3, md: 4 }}
-        py={{ base: 2, md: 3 }}
-        minW={{ base: "56px", md: "72px" }}
-        textAlign="center"
-      >
-        <Text
-          fontSize={{ base: "2xl", md: "4xl" }}
-          fontWeight="bold"
-          fontFamily="mono"
-          color="accent.terminal"
-          lineHeight="1"
-        >
-          {String(value).padStart(2, "0")}
-        </Text>
-      </Box>
-      <Text
-        fontSize="9px"
-        color="text.secondary"
-        letterSpacing="widest"
-        mt={1.5}
-        fontWeight="semibold"
-        textTransform="uppercase"
-      >
-        {label}
-      </Text>
-    </VStack>
-  );
-}
-
-function CountdownSeparator() {
-  return (
-    <Text
-      color="rgba(0,255,157,0.35)"
-      fontSize={{ base: "xl", md: "3xl" }}
-      fontFamily="mono"
-      mb={4}
-      userSelect="none"
-    >
-      :
-    </Text>
-  );
-}
-
 export default function LaunchPage() {
   usePageMeta("/launches");
   const { launches, loading } = useUpcomingLaunches();
   const nextLaunch = launches[0] ?? null;
-  const countdown = useCountdown(nextLaunch?.window_start);
-
-  const launchDate = nextLaunch?.window_start
-    ? new Date(nextLaunch.window_start).toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZoneName: "short",
-      })
-    : null;
-
-  const statusColor = STATUS_COLORS[nextLaunch?.status?.name] ?? "gray";
+  const status = statusStyle(nextLaunch?.status);
 
   return (
     <Container maxW="8xl" py={8}>
@@ -175,18 +105,18 @@ export default function LaunchPage() {
                 >
                   Next Launch
                 </Text>
-                {nextLaunch?.status?.name && (
+                {nextLaunch?.status && (
                   <>
                     <Text color="whiteAlpha.300" fontSize="xs">·</Text>
                     <Badge
-                      colorScheme={statusColor}
+                      colorScheme={status.colorScheme}
                       variant="subtle"
                       fontSize="10px"
                       px={2}
                       py={0.5}
                       rounded="full"
                     >
-                      {nextLaunch.status.name}
+                      {status.label}
                     </Badge>
                   </>
                 )}
@@ -200,22 +130,32 @@ export default function LaunchPage() {
                 lineHeight="1.15"
                 textAlign={{ base: "center", lg: "left" }}
               >
-                {loading
-                  ? "Loading…"
-                  : (nextLaunch?.name ?? "No upcoming launches")}
+                {loading ? (
+                  "Loading…"
+                ) : nextLaunch ? (
+                  <Link
+                    as={RouterLink}
+                    to={launchPath(nextLaunch)}
+                    _hover={{ color: "brand.300", textDecoration: "none" }}
+                  >
+                    {nextLaunch.name}
+                  </Link>
+                ) : (
+                  "No upcoming launches"
+                )}
               </Heading>
 
               {/* Details */}
               <VStack align={{ base: "center", lg: "start" }} spacing={1.5}>
-                {nextLaunch?.launch_service_provider?.name && (
+                {providerName(nextLaunch) && (
                   <HStack color="text.secondary" fontSize="sm" spacing={2}>
                     <Icon as={FaSatellite} boxSize={3} flexShrink={0} />
-                    <Text>{nextLaunch.launch_service_provider.name}</Text>
-                    {nextLaunch.rocket?.configuration?.name && (
+                    <Text>{providerName(nextLaunch)}</Text>
+                    {rocketName(nextLaunch) && (
                       <>
                         <Text color="whiteAlpha.300">·</Text>
                         <Text color="text.primary" fontWeight="medium">
-                          {nextLaunch.rocket.configuration.name}
+                          {rocketName(nextLaunch)}
                         </Text>
                       </>
                     )}
@@ -229,7 +169,7 @@ export default function LaunchPage() {
                   </HStack>
                 )}
 
-                {launchDate && (
+                {nextLaunch && (
                   <Text
                     fontSize="xs"
                     color="text.secondary"
@@ -237,7 +177,7 @@ export default function LaunchPage() {
                     letterSpacing="wide"
                     mt={1}
                   >
-                    {launchDate}
+                    {formatNet(nextLaunch)}
                   </Text>
                 )}
               </VStack>
@@ -257,28 +197,9 @@ export default function LaunchPage() {
 
               {loading ? (
                 <Spinner color="accent.terminal" size="xl" thickness="3px" />
-              ) : countdown ? (
-                <HStack spacing={1} align="flex-start">
-                  <CountdownBlock value={countdown.d} label="Days" />
-                  <CountdownSeparator />
-                  <CountdownBlock value={countdown.h} label="Hrs" />
-                  <CountdownSeparator />
-                  <CountdownBlock value={countdown.m} label="Min" />
-                  <CountdownSeparator />
-                  <CountdownBlock value={countdown.s} label="Sec" />
-                </HStack>
-              ) : (
-                <Badge
-                  colorScheme="green"
-                  px={5}
-                  py={2}
-                  fontSize="sm"
-                  rounded="full"
-                  variant="subtle"
-                >
-                  Launched!
-                </Badge>
-              )}
+              ) : nextLaunch ? (
+                <CountdownDisplay launch={nextLaunch} />
+              ) : null}
             </VStack>
 
           </Flex>

@@ -1,0 +1,21 @@
+[package]
+name = "orbital"
+version = "0.1.0"
+edition = "2021"
+description = "Orbital and solar geometry for Ephemeris, compiled to WebAssembly"
+license = "CC-BY-NC-4.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+
+[profile.release]
+# The module ships to every visitor who opens a launch page, so favour size
+# over the last few percent of speed. This is milliseconds of arithmetic.
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

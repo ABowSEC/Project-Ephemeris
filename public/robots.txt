@@ -7,3 +7,6 @@ Allow: /
 Disallow: /solarsim
 
 Sitemap: https://ephemeris-online.com/sitemap.xml
+# Launch detail pages turn over daily, so they are listed by an edge function
+# rather than baked in at build time.
+Sitemap: https://ephemeris-online.com/sitemap-launches.xml

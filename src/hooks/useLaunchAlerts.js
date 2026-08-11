@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@chakra-ui/react';
 import { getUpcomingLaunches } from '../services/launchStore';
 import { readFavorites } from './useFavorites';
+import { launchPath, launchTime as launchTimeOf } from '../utils/launchFields';
 
 // Countdown alerts for tracked launches. While the app (or installed PWA)
 // is open, a periodic check compares each tracked launch's time against
@@ -74,7 +75,7 @@ function writeFired(fired) {
   }
 }
 
-async function showSystemNotification(title, body) {
+async function showSystemNotification(title, body, url) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
     return;
   }
@@ -83,6 +84,9 @@ async function showSystemNotification(title, body) {
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: title,
+    // Read by the notificationclick handler in public/sw-notifications.js so
+    // tapping the alert opens the launch it is about, instead of the homepage.
+    data: { url },
   };
   try {
     // Android Chrome only allows notifications through the service worker
@@ -95,7 +99,14 @@ async function showSystemNotification(title, body) {
     // Fall through to the constructor form
   }
   try {
-    new Notification(title, options);
+    // No service worker in this path, so the click never reaches
+    // sw-notifications.js and has to be wired up here instead.
+    const notification = new Notification(title, options);
+    notification.onclick = () => {
+      window.focus();
+      window.location.assign(url);
+      notification.close();
+    };
   } catch {
     // Notifications unavailable; the in-app toast already covered it
   }
@@ -130,7 +141,7 @@ export function useLaunchAlerts() {
       const now = Date.now();
 
       for (const launch of launches) {
-        const launchTime = new Date(launch.net ?? launch.window_start).getTime();
+        const launchTime = new Date(launchTimeOf(launch)).getTime();
         if (!Number.isFinite(launchTime)) continue;
         const diff = launchTime - now;
         // Ignore far-future launches and ones that lifted off over 5 min ago
@@ -149,7 +160,7 @@ export function useLaunchAlerts() {
 
         const place = launch.pad?.location?.name;
         const body = place ? `${announce.body} from ${place}` : announce.body;
-        showSystemNotification(`🚀 ${launch.name}`, body);
+        showSystemNotification(`🚀 ${launch.name}`, body, launchPath(launch));
         toast({
           title: launch.name,
           description: body,

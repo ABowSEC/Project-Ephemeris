@@ -1,6 +1,10 @@
 # Security headers for Cloudflare Pages.
 #
 # The CSP is enforced. Notes on the non-obvious allowances:
+#   script-src 'wasm-unsafe-eval' - required to instantiate WebAssembly at all
+#                                in Chromium; without it the orbital module
+#                                (crates/orbital) is blocked. It does NOT
+#                                permit eval() or inline script.
 #   style-src 'unsafe-inline'  - Chakra/Emotion inject styles at runtime
 #   img-src https:             - mission images arrive from many third-party
 #                                CDNs (Space Devs, NASA, agency sites); the
@@ -13,7 +17,7 @@
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https:; connect-src 'self' https://ll.thespacedevs.com https://api.nasa.gov https://images-api.nasa.gov https://api.wheretheiss.at https://tiles.openfreemap.org; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https:; connect-src 'self' https://ll.thespacedevs.com https://api.nasa.gov https://images-api.nasa.gov https://api.wheretheiss.at https://tiles.openfreemap.org; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'
 
 # Hashed build assets are immutable: cache them for a year
 /assets/*

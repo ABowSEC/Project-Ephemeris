@@ -1,0 +1,24 @@
+{
+  // Pages Functions run on the Workers runtime: no DOM, but globals the browser
+  // does not have (caches.default, HTMLRewriter, KVNamespace, EventContext).
+  // Separate from the root tsconfig so neither side sees the other's globals.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext"],
+    "types": ["@cloudflare/workers-types"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["."]
+}

@@ -1,8 +1,10 @@
 import { useMemo } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Container,
   Heading,
+  Link,
   Text,
   VStack,
   HStack,
@@ -21,16 +23,8 @@ import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import TrackButton from "../components/TrackButton";
 import ErrorState from "../components/ErrorState";
-
-// Dot color per launch status abbreviation (The Space Devs status.abbrev)
-const STATUS_DOT = {
-  Go: "#48BB78",
-  TBC: "#ECC94B",
-  TBD: "#A0AEC0",
-  Success: "#48BB78",
-  Failure: "#F56565",
-  Hold: "#ED8936",
-};
+import { statusStyle } from "../data/launchStatus";
+import { launchPath, launchTime } from "../utils/launchFields";
 
 // Orange glowing marker showing how many upcoming launches fly from a site
 function siteIcon(count) {
@@ -83,7 +77,7 @@ function groupBySite(launches) {
   const list = [...sites.values()];
   for (const site of list) {
     site.launches.sort(
-      (a, b) => new Date(a.net ?? a.window_start) - new Date(b.net ?? b.window_start)
+      (a, b) => new Date(launchTime(a)) - new Date(launchTime(b))
     );
   }
   return list;
@@ -112,15 +106,25 @@ function SitePopup({ site }) {
             h="8px"
             borderRadius="full"
             flexShrink={0}
-            bg={STATUS_DOT[launch.status?.abbrev] ?? "#A0AEC0"}
-            title={launch.status?.name}
+            bg={statusStyle(launch.status).dot}
+            title={statusStyle(launch.status).label}
           />
           <Box minW={0}>
-            <Text fontSize="xs" fontWeight="semibold" color="#E2E8F0" noOfLines={1}>
+            {/* react-leaflet portals popup content, and portals keep React
+                context, so the router link works from inside the map. */}
+            <Link
+              as={RouterLink}
+              to={launchPath(launch)}
+              fontSize="xs"
+              fontWeight="semibold"
+              color="#E2E8F0"
+              noOfLines={1}
+              _hover={{ color: "#4FD1C5" }}
+            >
               {launch.name}
-            </Text>
+            </Link>
             <Text fontSize="10px" color="#7A93B8" fontFamily="mono">
-              {formatShortDate(launch.net ?? launch.window_start)}
+              {formatShortDate(launchTime(launch))}
             </Text>
           </Box>
         </HStack>

@@ -11,8 +11,11 @@
   },
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/build-wasm.mjs",
     "build": "vite build && node scripts/prerender.mjs",
+    "wasm": "node scripts/build-wasm.mjs",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p functions",
     "preview": "vite preview",
     "icons": "node scripts/gen-icons.mjs"
   },
@@ -38,9 +41,10 @@
     "three": "^0.177.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260804.1",
     "@eslint/js": "^9.25.0",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^9.25.0",
     "eslint-plugin-react": "^7.37.5",
@@ -48,6 +52,8 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
     "sharp": "^0.35.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.66.0",
     "vite": "^6.3.5",
     "vite-plugin-pwa": "^1.3.0"
   },
