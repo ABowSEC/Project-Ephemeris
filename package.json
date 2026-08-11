@@ -14,6 +14,7 @@
     "prebuild": "node scripts/build-wasm.mjs",
     "build": "vite build && node scripts/prerender.mjs",
     "wasm": "node scripts/build-wasm.mjs",
+    "prewarm": "node scripts/prewarm.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p functions",
     "preview": "vite preview",

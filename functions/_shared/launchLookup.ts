@@ -28,7 +28,19 @@ const TERMINAL_STATUSES = new Set([
   'Launch Failure',
 ]);
 
-const UPCOMING_FRESH_SECONDS = 5 * 60;
+// Sized against the upstream budget, not against how fresh we would like the
+// data to be. The free tier is 15 requests/hour, and the upcoming feed is
+// refetched once per window for the whole site, so the window sets a floor on
+// what the feed costs: 5 minutes spent 12 of the 15 on the feed alone and left
+// detail-page lookups fighting over the remaining 3, which is what turned a
+// cold cache on deploy day into 502s. At 20 minutes the feed costs 3/hour and
+// the rest of the budget goes to slugs.
+//
+// Nothing user-visible regresses at this window: launch schedules move on the
+// order of hours or days, the browser still revalidates every 60s
+// (browserMaxAge), and the countdown is computed client-side from the launch
+// time rather than from how recently we fetched it.
+const UPCOMING_FRESH_SECONDS = 20 * 60;
 const COMPLETED_FRESH_SECONDS = 6 * 60 * 60;
 
 /**
