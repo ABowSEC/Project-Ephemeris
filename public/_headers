@@ -12,12 +12,23 @@
 #   worker-src blob:           - MapLibre GL spawns its worker from a blob URL
 #   frame-src youtube/vimeo    - ISS live feed embed; APOD video embeds
 #   connect-src               - the four data APIs plus OpenFreeMap tiles
+#   cloudflareinsights.com     - Web Analytics is enabled on the zone, and
+#                                Cloudflare injects its beacon into every HTML
+#                                response at the edge, after these headers are
+#                                applied. The script is not in our markup and
+#                                cannot be removed from it, so the only choices
+#                                are to grant it or to turn off automatic
+#                                injection in the dashboard. Both entries are
+#                                required: static.* serves the script,
+#                                cloudflareinsights.com is where it reports.
+#                                This extends no new trust — Cloudflare already
+#                                terminates TLS and serves every byte here.
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https:; connect-src 'self' https://ll.thespacedevs.com https://api.nasa.gov https://images-api.nasa.gov https://api.wheretheiss.at https://tiles.openfreemap.org; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https:; connect-src 'self' https://ll.thespacedevs.com https://api.nasa.gov https://images-api.nasa.gov https://api.wheretheiss.at https://tiles.openfreemap.org https://cloudflareinsights.com; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'
 
 # Hashed build assets are immutable: cache them for a year
 /assets/*
