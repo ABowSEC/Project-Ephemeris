@@ -64,8 +64,10 @@ const pageTransition = {
 
 const navigationItems = [
   { path: '/',         label: 'Home' },
+  // /map is deliberately absent: it is reached from the Launches page rather
+  // than the top bar, since the map is a view of launch data, not a peer
+  // section. The route, its metadata, and its sitemap entry all still stand.
   { path: '/launches', label: 'Launches' },
-  { path: '/map',      label: 'Map' },
   { path: '/mars',     label: 'Mars' },
   { path: '/explore',  label: 'Explore' },
   { path: '/iss',      label: 'ISS' },

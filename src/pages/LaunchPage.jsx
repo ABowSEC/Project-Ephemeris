@@ -10,6 +10,7 @@ import {
   Badge,
   Flex,
   Link,
+  Button,
   Spinner,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
@@ -232,7 +233,21 @@ export default function LaunchPage() {
                   Every launch. Every countdown. Live.
                 </Text>
               </Box>
-              <AlertSettings />
+              {/* The map is no longer a top-level nav tab; this is how it is
+                  reached, next to the feed it visualizes. */}
+              <HStack spacing={3}>
+                <Button
+                  as={RouterLink}
+                  to="/map"
+                  size="sm"
+                  variant="outline"
+                  colorScheme="teal"
+                  leftIcon={<Icon as={FaMapMarkerAlt} boxSize={3} />}
+                >
+                  World launch map
+                </Button>
+                <AlertSettings />
+              </HStack>
             </Flex>
 
             <LaunchFeed />
