@@ -205,7 +205,14 @@ export async function getLaunchBySlug(slug, { force = false } = {}) {
       .catch((err) => {
         // Stale data beats an error page, but a 404 is a real answer: the slug
         // does not exist, and retrying or showing an old copy would both be wrong.
-        if (cached && err?.status !== 404) return cached.data;
+        if (err?.status === 404) throw err;
+        if (cached) return cached.data;
+        // Never fetched this launch before and the endpoint is down. The feed
+        // is a separate request that may well have succeeded, and it carries
+        // this launch — the same lesser copy getCachedLaunchBySlug already
+        // hands the page on a cold click-through. Prefer it to an error page.
+        const fromFeed = getCachedLaunches()?.results?.find((launch) => launch.slug === slug);
+        if (fromFeed) return fromFeed;
         throw err;
       })
       .finally(() => {

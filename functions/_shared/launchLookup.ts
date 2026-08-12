@@ -3,7 +3,7 @@
 // validation and identical cache keys — if they diverged, the rewriter would
 // spend a second upstream call to fetch what the API endpoint already cached.
 
-import { LL2_BASE, NotFoundError, type Ll2CacheOptions } from './ll2Cache';
+import { LL2_BASE, NotFoundError, readCached, type Ll2CacheOptions } from './ll2Cache';
 
 /**
  * Launch Library slugs are lowercase kebab-case, e.g.
@@ -79,6 +79,23 @@ export function launchBySlugOptions(slug: string): Ll2CacheOptions {
       const launch = parsed.results?.[0];
       if (!launch) throw new NotFoundError(`No launch with slug ${slug}`);
       return JSON.stringify(launch);
+    },
+    // On the free tier the detailed lookup is the request most likely to be
+    // refused, and a slug nobody has visited yet has no stale copy to fall back
+    // on — which is exactly how a working site produced a hard 502 on a launch
+    // that had just flown. The upcoming feed is a single call the site already
+    // makes for everyone, and it carries this launch's name, status, image, and
+    // T-0; only the detailed-only fields (updates timeline, webcasts, attempt
+    // counts) are missing. A page without those beats no page at all, and the
+    // client tolerates their absence already — it paints feed entries this way
+    // when you click through from the list.
+    async fallback(context) {
+      const feed = await readCached<{ results?: { slug?: string }[] }>(
+        context,
+        upcomingFeedOptions
+      );
+      const match = feed?.results?.find((launch) => launch.slug === slug);
+      return match ? JSON.stringify(match) : null;
     },
   };
 }
