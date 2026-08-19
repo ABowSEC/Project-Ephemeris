@@ -269,6 +269,14 @@ function cleanCopyright(raw) {
   return raw.split(/\s*Text:/)[0].replace(/\s+/g, " ").trim();
 }
 
+// media_type "video" covers two different things: a player embed (YouTube,
+// Vimeo) and a bare video file hosted on apod.nasa.gov. The second kind must
+// go in a <video> tag, not an iframe - our CSP frame-src only allows the
+// embed hosts, so framing an .mp4 gets blocked outright.
+function isVideoFile(url) {
+  return /\.(mp4|webm|ogv|mov|m4v)(\?|#|$)/i.test(url || "");
+}
+
 export default function Home() {
   usePageMeta("/");
   const { data: apod, loading, error, refetch } = useApi(fetchApod);
@@ -366,7 +374,23 @@ export default function Home() {
             bg="black"
           >
             {isVideo ? (
-              apod.thumbnail_url ? (
+              isVideoFile(apod.url) ? (
+                <Box
+                  as="video"
+                  src={apod.url}
+                  controls
+                  loop
+                  muted
+                  autoPlay
+                  playsInline
+                  poster={apod.thumbnail_url}
+                  position="absolute"
+                  inset={0}
+                  w="100%"
+                  h="100%"
+                  objectFit="contain"
+                />
+              ) : apod.thumbnail_url ? (
                 <Box position="absolute" inset={0} onClick={onOpen} cursor="pointer">
                   <Image
                     src={apod.thumbnail_url}
@@ -692,13 +716,26 @@ export default function Home() {
               <VStack spacing={4}>
                 {isVideoApod ? (
                   <AspectRatio ratio={16 / 9} w="100%">
-                    <Box
-                      as="iframe"
-                      src={apod.url}
-                      title={apod.title}
-                      allowFullScreen
-                      borderRadius="lg"
-                    />
+                    {isVideoFile(apod.url) ? (
+                      <Box
+                        as="video"
+                        src={apod.url}
+                        controls
+                        loop
+                        playsInline
+                        poster={apod.thumbnail_url}
+                        borderRadius="lg"
+                        sx={{ objectFit: "contain", bg: "black" }}
+                      />
+                    ) : (
+                      <Box
+                        as="iframe"
+                        src={apod.url}
+                        title={apod.title}
+                        allowFullScreen
+                        borderRadius="lg"
+                      />
+                    )}
                   </AspectRatio>
                 ) : (
                   <Image
