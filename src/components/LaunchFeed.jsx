@@ -172,18 +172,16 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }) {
             />
           </Box>
           <VStack align="start" spacing={0.5} flex={1} minW={0}>
-            <LinkOverlay as={RouterLink} to={launchPath(launch)}>
-              <Text
-                fontSize="lg"
-                fontWeight="bold"
-                color="white"
-                lineHeight="1.2"
-                noOfLines={2}
-                textShadow="0 1px 6px rgba(0,0,0,0.7)"
-              >
-                {launch.name}
-              </Text>
-            </LinkOverlay>
+            <Text
+              fontSize="lg"
+              fontWeight="bold"
+              color="white"
+              lineHeight="1.2"
+              noOfLines={2}
+              textShadow="0 1px 6px rgba(0,0,0,0.7)"
+            >
+              {launch.name}
+            </Text>
             <Text fontSize="sm" color="whiteAlpha.800" noOfLines={1}>
               {provider ?? 'Unknown provider'}
             </Text>
@@ -202,6 +200,25 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }) {
           {formatNet(launch)}
         </Text>
       </VStack>
+
+      {/* The real click target for the whole card, added last so it paints
+          above everything else at the same z-index tier (the title text
+          above, which is now plain, non-linked text) while staying below the
+          track button/badge group (zIndex 3), so starring a launch still
+          doesn't navigate to it. It has to be a direct child of LinkBox,
+          not nested inside the image Box above — that Box is also
+          `position="relative"`, so a LinkOverlay nested inside it would only
+          ever stretch to cover the image, leaving the stats section below
+          permanently unclickable. */}
+      <LinkOverlay
+        as={RouterLink}
+        to={launchPath(launch)}
+        aria-label={launch.name}
+        position="absolute"
+        inset={0}
+        zIndex={2}
+        borderRadius="inherit"
+      />
     </LinkBox>
   );
 }
