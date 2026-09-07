@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
@@ -9,36 +9,15 @@ import {
   VStack,
   HStack,
   Spinner,
-  SimpleGrid,
-  Stat,
-  StatLabel,
-  StatNumber,
   Divider,
 } from "@chakra-ui/react";
-import { MapContainer, Marker, Popup } from "react-leaflet";
-import VectorBasemap from "../components/VectorBasemap";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import LaunchGlobe from "../components/LaunchGlobe";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import TrackButton from "../components/TrackButton";
 import ErrorState from "../components/ErrorState";
 import { statusStyle } from "../data/launchStatus";
 import { launchPath, launchTime } from "../utils/launchFields";
-
-// Orange glowing marker showing how many upcoming launches fly from a site
-function siteIcon(count) {
-  return L.divIcon({
-    className: "",
-    html:
-      `<div style="width:30px;height:30px;border-radius:50%;` +
-      `background:rgba(251,146,60,0.92);border:2px solid #FDBA74;` +
-      `box-shadow:0 0 14px rgba(251,146,60,0.75);color:#0B1120;` +
-      `font:700 13px/26px sans-serif;text-align:center;">${count}</div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-  });
-}
 
 function formatShortDate(dateString) {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -83,20 +62,17 @@ function groupBySite(launches) {
   return list;
 }
 
+// The site name itself is rendered by LaunchGlobe's panel header, which
+// hosts this component — just the count + list here.
 function SitePopup({ site }) {
   const shown = site.launches.slice(0, 5);
   const extra = site.launches.length - shown.length;
 
   return (
     <VStack align="stretch" spacing={2}>
-      <Box>
-        <Text fontWeight="bold" fontSize="sm" color="#E2E8F0">
-          {site.name}
-        </Text>
-        <Text fontSize="xs" color="#7A93B8">
-          {site.launches.length} upcoming launch{site.launches.length === 1 ? "" : "es"}
-        </Text>
-      </Box>
+      <Text fontSize="xs" color="#7A93B8">
+        {site.launches.length} upcoming launch{site.launches.length === 1 ? "" : "es"}
+      </Text>
       <Divider borderColor="#1E2D45" />
       {shown.map((launch) => (
         <HStack key={launch.id} spacing={2} align="center">
@@ -110,8 +86,6 @@ function SitePopup({ site }) {
             title={statusStyle(launch.status).label}
           />
           <Box minW={0}>
-            {/* react-leaflet portals popup content, and portals keep React
-                context, so the router link works from inside the map. */}
             <Link
               as={RouterLink}
               to={launchPath(launch)}
@@ -142,28 +116,14 @@ export default function LaunchMapPage() {
   usePageMeta("/map");
   const { launches, loading, error, refetch } = useUpcomingLaunches();
   const sites = useMemo(() => groupBySite(launches), [launches]);
-
-  const stats = useMemo(() => {
-    const mapped = sites.reduce((n, s) => n + s.launches.length, 0);
-    const countries = new Set(sites.map((s) => s.countryCode).filter(Boolean));
-    const providers = new Set(
-      launches.map((l) => l.launch_service_provider?.name).filter(Boolean)
-    );
-    return { mapped, sites: sites.length, countries: countries.size, providers: providers.size };
-  }, [sites, launches]);
+  const [selectedSite, setSelectedSite] = useState(null);
 
   return (
     <Container maxW="8xl" py={8}>
       <VStack spacing={6} align="stretch">
-        <Box>
-          <Heading as="h1" size="lg" color="text.primary" mb={2}>
-            World Launch Map
-          </Heading>
-          <Text color="text.secondary">
-            Every launch site with a mission on the schedule. Click a marker to
-            see what is flying from there and star launches to track them.
-          </Text>
-        </Box>
+        <Heading as="h1" size="lg" color="text.primary">
+          World Launch Map
+        </Heading>
 
         {loading ? (
           <VStack py={16} spacing={6}>
@@ -174,76 +134,25 @@ export default function LaunchMapPage() {
           <ErrorState title="Error loading launches!" message={error} onRetry={refetch} />
         ) : (
           <>
-            <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-              {[
-                { label: "Upcoming Launches", value: stats.mapped },
-                { label: "Launch Sites", value: stats.sites },
-                { label: "Countries", value: stats.countries },
-                { label: "Providers", value: stats.providers },
-              ].map(({ label, value }) => (
-                <Stat
-                  key={label}
-                  bg="bg.card"
-                  border="1px solid"
-                  borderColor="border.default"
-                  borderRadius="xl"
-                  px={5}
-                  py={4}
-                >
-                  <StatNumber color="accent.terminal" fontSize="2xl">
-                    {value}
-                  </StatNumber>
-                  <StatLabel color="text.secondary" fontSize="xs">
-                    {label}
-                  </StatLabel>
-                </Stat>
-              ))}
-            </SimpleGrid>
-
             <Box
               borderRadius="xl"
               overflow="hidden"
               border="1px solid"
               borderColor="border.default"
               shadow="lg"
-              sx={{
-                ".leaflet-container": { bg: "#03050D", fontFamily: "inherit" },
-                ".leaflet-popup-content-wrapper": {
-                  bg: "#0B1120",
-                  color: "#E2E8F0",
-                  border: "1px solid #1E2D45",
-                  borderRadius: "12px",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
-                },
-                ".leaflet-popup-tip": { bg: "#0B1120" },
-                ".leaflet-popup-content": { m: "12px 14px", minW: "230px" },
-                ".leaflet-popup-close-button": { color: "#7A93B8" },
-              }}
+              position="relative"
+              h="560px"
             >
-              <MapContainer
-                center={[22, 10]}
-                zoom={2}
-                minZoom={2}
-                worldCopyJump
-                style={{ height: "560px", width: "100%" }}
-              >
-                <VectorBasemap />
-                {sites.map((site) => (
-                  <Marker
-                    key={site.key}
-                    position={[site.lat, site.lng]}
-                    icon={siteIcon(site.launches.length)}
-                  >
-                    <Popup>
-                      <SitePopup site={site} />
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+              <LaunchGlobe
+                sites={sites}
+                onSelectSite={setSelectedSite}
+                selectedSite={selectedSite}
+                renderSiteDetails={(site) => <SitePopup site={site} />}
+              />
             </Box>
 
             <Text fontSize="sm" color="text.secondary" textAlign="center">
-              Marker numbers show upcoming launches per site · Data from The
+              Point size reflects upcoming launches per site · Data from The
               Space Devs API
             </Text>
           </>
