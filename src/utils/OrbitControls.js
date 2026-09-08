@@ -1,13 +1,17 @@
 import * as THREE from 'three';
 
 export class OrbitControls {
-  constructor(camera, domElement) {
+  constructor(camera, domElement, options = {}) {
     this.camera     = camera;
     this.domElement = domElement;
     this.target     = new THREE.Vector3();
     this.enableDamping = true;
     this.enablePan     = false;
     this.dampingFactor = 0.05;
+    // Unset (0/Infinity) by default so existing unclamped callers — the solar
+    // sim zooms freely between planets — see no behavior change.
+    this.minDistance = options.minDistance ?? 0;
+    this.maxDistance = options.maxDistance ?? Infinity;
 
     this.spherical      = new THREE.Spherical();
     this.sphericalDelta = new THREE.Spherical();
@@ -124,6 +128,7 @@ export class OrbitControls {
     this.spherical.theta  += this.sphericalDelta.theta;
     this.spherical.phi    += this.sphericalDelta.phi;
     this.spherical.radius *= this.scale;
+    this.spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, this.spherical.radius));
     this.spherical.makeSafe();
 
     this._offset.setFromSpherical(this.spherical);

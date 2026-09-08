@@ -1,5 +1,6 @@
 import { Box, HStack, Link, Text, VStack } from '@chakra-ui/react';
 import { ExternalLinkIcon } from '@chakra-ui/icons';
+import Card from '../Card';
 import type { LaunchUpdate } from '../../types/launchLibrary';
 
 /**
@@ -19,7 +20,7 @@ export default function MissionUpdates({ updates }: { updates: LaunchUpdate[] })
   );
 
   return (
-    <Box bg="bg.card" border="1px solid" borderColor="border.default" borderRadius="xl" p={5}>
+    <Card p={5}>
       <Text fontWeight="600" mb={4}>
         Mission Updates
       </Text>
@@ -68,6 +69,6 @@ export default function MissionUpdates({ updates }: { updates: LaunchUpdate[] })
           </HStack>
         ))}
       </VStack>
-    </Box>
+    </Card>
   );
 }

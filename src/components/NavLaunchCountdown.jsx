@@ -23,7 +23,7 @@ function formatCountdown({ d, h, m, s }) {
 export default function NavLaunchCountdown() {
   // Errors are deliberately not rendered: the readout is decorative, so on
   // failure we keep showing the last good launch or hide entirely.
-  const { launches, loading } = useUpcomingLaunches();
+  const { launches, loading, stale } = useUpcomingLaunches();
   const nextLaunch = launches[0] ?? null;
   const timeLeft = useCountdown(nextLaunch?.window_start);
 
@@ -49,12 +49,15 @@ export default function NavLaunchCountdown() {
       rounded="md"
       transition="background 0.2s"
       _hover={{ bg: 'whiteAlpha.50', textDecoration: 'none' }}
+      title={stale ? 'Launch data may be outdated — we\'re having trouble refreshing it' : undefined}
     >
       <Box
         boxSize="6px"
         rounded="full"
-        bg="accent.terminal"
-        animation={`${ping} 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite`}
+        bg={stale ? 'orange.300' : 'accent.terminal'}
+        // The ping reads as "live" — don't play it over data we can't
+        // currently confirm is, since that itself would be misleading.
+        animation={stale ? undefined : `${ping} 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite`}
         flexShrink={0}
       />
 

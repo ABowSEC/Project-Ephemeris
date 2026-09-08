@@ -1,3 +1,13 @@
 # SPA fallback: serve the app shell for every route so deep links
-# like /launches and /map work on direct visits and refreshes
-/* /index.html 200
+# like /launches and /map work on direct visits and refreshes.
+#
+# Cloudflare Pages' _redirects parser rejects a bare `/* /index.html 200`
+# rule as a false-positive infinite loop (its clean-URL normalization
+# treats a request for /index.html itself as looping back through this
+# same rule) and silently drops EVERY rule in the file when it does,
+# per the build log ("Parsed 0 valid redirect rules"). Excluding the
+# destination file from the wildcard's own match avoids that false
+# positive: requests for the literal /index.html file skip straight to
+# static serving instead of re-entering this rule.
+/index.html   /index.html   200
+/*            /index.html   200

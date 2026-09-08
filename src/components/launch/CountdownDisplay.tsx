@@ -1,7 +1,8 @@
-import { Badge, Box, HStack, Text, VStack } from '@chakra-ui/react';
+import { Box, HStack, Text, VStack } from '@chakra-ui/react';
 import { useCountdown } from '../../hooks/useCountdown';
 import { formatNet, hasPreciseTime, launchTime } from '../../utils/launchFields';
-import { hasFlown, statusStyle } from '../../data/launchStatus';
+import { hasFlown } from '../../data/launchStatus';
+import StatusBadge from '../StatusBadge';
 import type { AnyLaunch } from '../../types/launchLibrary';
 
 /**
@@ -24,14 +25,9 @@ export default function CountdownDisplay({
   const target = launchTime(launch);
   const countdown = useCountdown(hasPreciseTime(launch) ? target : null);
   const flown = hasFlown(launch.status);
-  const style = statusStyle(launch.status);
 
   if (flown) {
-    return (
-      <Badge colorScheme={style.colorScheme} px={5} py={2} fontSize="sm" rounded="full" variant="subtle">
-        {style.label}
-      </Badge>
-    );
+    return <StatusBadge status={launch.status} size="lg" />;
   }
 
   if (!countdown) {
@@ -39,9 +35,11 @@ export default function CountdownDisplay({
     // the date is too vague to count down to. Both want words, not digits.
     return (
       <VStack spacing={1}>
-        <Badge colorScheme={style.colorScheme} px={5} py={2} fontSize="sm" rounded="full" variant="subtle">
-          {hasPreciseTime(launch) ? 'Launch window open' : style.label}
-        </Badge>
+        <StatusBadge
+          status={launch.status}
+          size="lg"
+          label={hasPreciseTime(launch) ? 'Launch window open' : undefined}
+        />
         <Text fontSize="xs" color="text.secondary" fontFamily="mono">
           {formatNet(launch)}
         </Text>
