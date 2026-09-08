@@ -20,57 +20,14 @@ import { isValidSlug, launchBySlugOptions } from '../_shared/launchLookup';
 // canonical origin are defined exactly once. routeMeta.js is deliberately
 // dependency-free, which is what makes importing it here safe.
 import { SITE_NAME, SITE_URL } from '../../src/seo/routeMeta.js';
+// Same reasoning: launchFields.ts is dependency-free/DOM-free by convention,
+// so it's safe to import here too. This is also what LaunchDetailPage.tsx's
+// usePageMeta override uses, so the edge-rendered shell and the client-side
+// SPA navigation can never disagree on title/description again.
+import { buildLaunchTitle, buildLaunchDescription } from '../../src/utils/launchFields';
 import type { LaunchDetailed } from '../../src/types/launchLibrary';
 
 const SHELL_CACHE_SECONDS = 300;
-
-/** Longest description a preview card will show before truncating anyway. */
-const DESCRIPTION_LIMIT = 300;
-
-function truncate(text: string, limit: number): string {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  if (clean.length <= limit) return clean;
-  // Cut on a word boundary so the ellipsis doesn't land mid-word
-  return `${clean.slice(0, clean.lastIndexOf(' ', limit - 1))}...`;
-}
-
-function formatLaunchDate(launch: LaunchDetailed): string {
-  const iso = launch.net ?? launch.window_start;
-  if (!iso) return 'Date to be announced';
-  // Deliberately UTC: this runs at the edge, where "local time" is the
-  // datacenter's, not the reader's. The SPA re-renders it in the visitor's own
-  // timezone once it hydrates.
-  return new Date(iso).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-/**
- * Prefer the mission's own description; fall back to a sentence assembled from
- * the facts we always have. A preview card with "Launch Details" on it is
- * worse than no card at all.
- */
-function buildDescription(launch: LaunchDetailed): string {
-  const mission = launch.mission?.description?.trim();
-  if (mission) return truncate(mission, DESCRIPTION_LIMIT);
-
-  const provider = launch.launch_service_provider?.name;
-  const rocket = launch.rocket?.configuration?.full_name ?? launch.rocket?.configuration?.name;
-  const pad = launch.pad?.location?.name ?? launch.pad?.name;
-
-  const parts = [
-    provider ? `${provider} is scheduled to launch` : 'Scheduled launch of',
-    rocket ? `a ${rocket}` : 'a rocket',
-    pad ? `from ${pad}` : null,
-    `on ${formatLaunchDate(launch)}.`,
-    'Live countdown, official webcast, and mission updates.',
-  ].filter(Boolean);
-
-  return truncate(parts.join(' '), DESCRIPTION_LIMIT);
-}
 
 /**
  * Rewrites one meta tag's content attribute. HTMLRewriter escapes attribute
@@ -128,6 +85,24 @@ function jsonLd(launch: LaunchDetailed, url: string): string {
   return JSON.stringify(data).replaceAll('<', '\\u003c');
 }
 
+/**
+ * Mirrors the visible Home > Launches > Mission breadcrumb trail
+ * (src/components/Breadcrumbs.tsx) so crawlers — which never run the SPA's
+ * client-side breadcrumb markup — still see the crawl path.
+ */
+function breadcrumbJsonLd(launch: LaunchDetailed, url: string): string {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Launches', item: `${SITE_URL}/launches` },
+      { '@type': 'ListItem', position: 3, name: launch.mission?.name ?? launch.name, item: url },
+    ],
+  };
+  return JSON.stringify(data).replaceAll('<', '\\u003c');
+}
+
 export async function onRequestGet(context: Ll2Context): Promise<Response> {
   const { request, env, params } = context;
   const slug = String(params.slug ?? '');
@@ -162,8 +137,8 @@ export async function onRequestGet(context: Ll2Context): Promise<Response> {
     return new Response(shell.body, { status: 200, headers: shell.headers });
   }
 
-  const title = `${launch.name} · ${SITE_NAME}`;
-  const description = buildDescription(launch);
+  const title = `${buildLaunchTitle(launch)} · ${SITE_NAME}`;
+  const description = buildLaunchDescription(launch);
   const url = `${SITE_URL}/launches/${slug}`;
   const image = launch.image ?? `${SITE_URL}/icons/icon-512.png`;
 
@@ -213,6 +188,9 @@ export async function onRequestGet(context: Ll2Context): Promise<Response> {
     element(el) {
       el.append(`<link rel="canonical" href="${url}" />`, { html: true });
       el.append(`<script type="application/ld+json">${jsonLd(launch, url)}</script>`, {
+        html: true,
+      });
+      el.append(`<script type="application/ld+json">${breadcrumbJsonLd(launch, url)}</script>`, {
         html: true,
       });
     },
