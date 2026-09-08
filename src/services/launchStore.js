@@ -57,6 +57,18 @@ export function getCachedLaunches() {
 }
 
 /**
+ * When the cached upcoming-launches payload was actually fetched, or null if
+ * there is no cache yet. Distinct from "is it fresh" (FRESH_MS governs that
+ * for deciding whether to refetch) — this is for telling a visitor their data
+ * might be old, which matters most when repeated refetches keep failing (see
+ * the stale-on-error fallback in getUpcomingLaunches) and nothing else would
+ * otherwise reveal that to them.
+ */
+export function getUpcomingLaunchesFetchedAt() {
+  return readCache()?.fetchedAt ?? null;
+}
+
+/**
  * Get the upcoming-launches API payload, hitting the network only when the
  * cache is older than FRESH_MS. Concurrent callers share one request.
  *

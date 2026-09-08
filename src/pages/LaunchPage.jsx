@@ -18,6 +18,7 @@ import { FaRocket, FaMapMarkerAlt, FaSatellite } from "react-icons/fa";
 import LaunchFeed from "../components/LaunchFeed";
 import AlertSettings from "../components/AlertSettings";
 import CountdownDisplay from "../components/launch/CountdownDisplay";
+import StaleDataNotice from "../components/StaleDataNotice";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { statusStyle } from "../data/launchStatus";
@@ -30,7 +31,7 @@ const pulseAnim = keyframes`
 
 export default function LaunchPage() {
   usePageMeta("/launches");
-  const { launches, loading } = useUpcomingLaunches();
+  const { launches, loading, stale, fetchedAt } = useUpcomingLaunches();
   const nextLaunch = launches[0] ?? null;
   const status = statusStyle(nextLaunch?.status);
 
@@ -201,6 +202,8 @@ export default function LaunchPage() {
               ) : nextLaunch ? (
                 <CountdownDisplay launch={nextLaunch} />
               ) : null}
+
+              <StaleDataNotice stale={stale} fetchedAt={fetchedAt} />
             </VStack>
 
           </Flex>

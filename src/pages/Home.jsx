@@ -42,6 +42,7 @@ import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { useCountdown } from "../hooks/useCountdown";
 import { usePageMeta } from "../hooks/usePageMeta";
 import ErrorState from "../components/ErrorState";
+import StaleDataNotice from "../components/StaleDataNotice";
 
 const pulse = keyframes`
   0%, 100% { opacity: 1; }
@@ -131,7 +132,7 @@ function QuickLinks() {
 }
 
 function NextLaunchPanel() {
-  const { launches, loading } = useUpcomingLaunches();
+  const { launches, loading, stale, fetchedAt } = useUpcomingLaunches();
   const next = launches[0] ?? null;
   const countdown = useCountdown(next?.window_start);
 
@@ -203,6 +204,8 @@ function NextLaunchPanel() {
           <Text noOfLines={1}>{next.pad.location.name}</Text>
         </HStack>
       )}
+
+      <StaleDataNotice stale={stale} fetchedAt={fetchedAt} />
     </VStack>
   );
 }
