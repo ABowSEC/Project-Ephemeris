@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import { Box, Button, Heading, Text, VStack } from '@chakra-ui/react';
+import Card from './Card';
 
 // A stale tab requesting an old hashed chunk after a redeploy lands here
 // too (the lazy import rejects); a reload fetches the new build, so the
@@ -24,17 +25,7 @@ class ErrorBoundary extends Component {
 
     return (
       <Box py={20} px={6}>
-        <VStack
-          spacing={5}
-          maxW="md"
-          mx="auto"
-          textAlign="center"
-          bg="bg.card"
-          border="1px solid"
-          borderColor="border.default"
-          rounded="2xl"
-          p={10}
-        >
+        <Card as={VStack} spacing={5} maxW="md" mx="auto" textAlign="center" borderRadius="2xl" p={10}>
           <Heading as="h2" size="md" color="text.primary">
             {stale ? 'Update available' : 'Something went wrong'}
           </Heading>
@@ -46,7 +37,7 @@ class ErrorBoundary extends Component {
           <Button colorScheme="brand" onClick={() => window.location.reload()}>
             Reload
           </Button>
-        </VStack>
+        </Card>
       </Box>
     );
   }

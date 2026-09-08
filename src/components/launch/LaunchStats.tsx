@@ -1,4 +1,5 @@
 import { Box, SimpleGrid, Text } from '@chakra-ui/react';
+import Card from '../Card';
 import type { LaunchDetailed } from '../../types/launchLibrary';
 
 /**
@@ -41,7 +42,7 @@ export default function LaunchStats({ launch }: { launch: LaunchDetailed }) {
   if (!stats.length) return null;
 
   return (
-    <Box bg="bg.card" border="1px solid" borderColor="border.default" borderRadius="xl" p={5}>
+    <Card p={5}>
       <Text fontWeight="600" mb={4}>
         By the Numbers
       </Text>
@@ -62,7 +63,7 @@ export default function LaunchStats({ launch }: { launch: LaunchDetailed }) {
           </Box>
         ))}
       </SimpleGrid>
-    </Box>
+    </Card>
   );
 }
 

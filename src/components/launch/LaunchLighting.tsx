@@ -4,6 +4,7 @@ import { FaMoon, FaRegSun, FaSun } from 'react-icons/fa';
 import { getLighting, type Lighting } from '../../utils/orbital';
 import { launchDate, padCoordinates } from '../../utils/launchFields';
 import { hasFlown } from '../../data/launchStatus';
+import Card from '../Card';
 import type { AnyLaunch } from '../../types/launchLibrary';
 
 /**
@@ -48,13 +49,7 @@ export default function LaunchLighting({ launch }: { launch: AnyLaunch }) {
   const { icon, color, headline, detail } = describe(lighting, flown);
 
   return (
-    <Box
-      bg="bg.card"
-      border="1px solid"
-      borderColor={lighting.twilightLaunch ? 'accent.terminal' : 'border.default'}
-      borderRadius="xl"
-      p={5}
-    >
+    <Card borderColor={lighting.twilightLaunch ? 'accent.terminal' : 'border.default'} p={5}>
       <HStack spacing={3} align="flex-start">
         <Icon as={icon} color={color} boxSize={5} mt={0.5} />
         <Box>
@@ -64,7 +59,7 @@ export default function LaunchLighting({ launch }: { launch: AnyLaunch }) {
           </Text>
         </Box>
       </HStack>
-    </Box>
+    </Card>
   );
 }
 

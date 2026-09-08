@@ -5,7 +5,6 @@ import {
   AlertDescription,
   AlertIcon,
   AlertTitle,
-  Badge,
   Box,
   Button,
   HStack,
@@ -23,7 +22,7 @@ import LaunchFilters from './LaunchFilters';
 import { useLaunchFilters } from '../hooks/useLaunchFilters';
 import TrackButton from './TrackButton';
 import ErrorState from './ErrorState';
-import { statusStyle } from '../data/launchStatus';
+import StatusBadge from './StatusBadge';
 import { formatNet, launchPath, launchTime, providerName } from '../utils/launchFields';
 import { useCountdown } from '../hooks/useCountdown';
 
@@ -81,7 +80,6 @@ function CardCountdown({ launch }) {
  * job is to identify the launch and get you there.
  */
 function LaunchCard({ launch, index = 0, reduceMotion = false }) {
-  const style = statusStyle(launch.status);
   const provider = providerName(launch);
 
   return (
@@ -141,9 +139,7 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }) {
             navigate to it. LinkOverlay covers the rest of the card. */}
         <HStack position="absolute" top={3} right={3} spacing={2} zIndex={3}>
           <TrackButton launch={launch} />
-          <Badge colorScheme={style.colorScheme} px={3} py={1} borderRadius="full">
-            {style.label}
-          </Badge>
+          <StatusBadge status={launch.status} size="md" />
         </HStack>
 
         <HStack

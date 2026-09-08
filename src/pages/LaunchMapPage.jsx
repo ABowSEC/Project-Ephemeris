@@ -16,7 +16,7 @@ import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import TrackButton from "../components/TrackButton";
 import ErrorState from "../components/ErrorState";
-import { statusStyle } from "../data/launchStatus";
+import { StatusDot } from "../components/StatusBadge";
 import { launchPath, launchTime } from "../utils/launchFields";
 
 function formatShortDate(dateString) {
@@ -70,41 +70,34 @@ function SitePopup({ site }) {
 
   return (
     <VStack align="stretch" spacing={2}>
-      <Text fontSize="xs" color="#7A93B8">
+      <Text fontSize="xs" color="text.secondary">
         {site.launches.length} upcoming launch{site.launches.length === 1 ? "" : "es"}
       </Text>
-      <Divider borderColor="#1E2D45" />
+      <Divider borderColor="border.default" />
       {shown.map((launch) => (
         <HStack key={launch.id} spacing={2} align="center">
           <TrackButton launch={launch} size="xs" />
-          <Box
-            w="8px"
-            h="8px"
-            borderRadius="full"
-            flexShrink={0}
-            bg={statusStyle(launch.status).dot}
-            title={statusStyle(launch.status).label}
-          />
+          <StatusDot status={launch.status} />
           <Box minW={0}>
             <Link
               as={RouterLink}
               to={launchPath(launch)}
               fontSize="xs"
               fontWeight="semibold"
-              color="#E2E8F0"
+              color="text.primary"
               noOfLines={1}
-              _hover={{ color: "#4FD1C5" }}
+              _hover={{ color: "brand.300" }}
             >
               {launch.name}
             </Link>
-            <Text fontSize="10px" color="#7A93B8" fontFamily="mono">
+            <Text fontSize="10px" color="text.secondary" fontFamily="mono">
               {formatShortDate(launchTime(launch))}
             </Text>
           </Box>
         </HStack>
       ))}
       {extra > 0 && (
-        <Text fontSize="10px" color="#7A93B8">
+        <Text fontSize="10px" color="text.secondary">
           + {extra} more from this site
         </Text>
       )}

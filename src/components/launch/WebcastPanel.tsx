@@ -3,6 +3,7 @@ import { ExternalLinkIcon } from '@chakra-ui/icons';
 import { FaYoutube, FaVimeo, FaBroadcastTower } from 'react-icons/fa';
 import { embeddableVideo, officialWebcast, webcasts } from '../../utils/launchFields';
 import { hasFlown } from '../../data/launchStatus';
+import Card from '../Card';
 import type { AnyLaunch, LaunchDetailed, VideoUrl } from '../../types/launchLibrary';
 
 /**
@@ -26,13 +27,7 @@ export default function WebcastPanel({ launch }: { launch: AnyLaunch }) {
   const embed = embeddableVideo(primary.url);
 
   return (
-    <Box
-      bg="bg.card"
-      border="1px solid"
-      borderColor="border.default"
-      borderRadius="xl"
-      overflow="hidden"
-    >
+    <Card overflow="hidden">
       <HStack px={5} py={3} justify="space-between" borderBottom="1px solid" borderColor="border.default">
         <HStack spacing={2}>
           <Icon as={FaBroadcastTower} color="text.secondary" />
@@ -84,7 +79,7 @@ export default function WebcastPanel({ launch }: { launch: AnyLaunch }) {
           ))}
         </VStack>
       )}
-    </Box>
+    </Card>
   );
 }
 

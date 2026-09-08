@@ -20,6 +20,7 @@ import {
 import { TimeIcon, ExternalLinkIcon } from "@chakra-ui/icons";
 import { MapContainer, Marker, Polyline, useMap } from "react-leaflet";
 import VectorBasemap from "../components/VectorBasemap";
+import Card from "../components/Card";
 import { usePageMeta } from "../hooks/usePageMeta";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -200,13 +201,7 @@ export default function ISSLivePage() {
         <Divider borderColor="border.default" />
 
         {/* Telemetry cards */}
-        <Box
-          bg="bg.card"
-          border="1px solid"
-          borderColor="border.default"
-          borderRadius="xl"
-          p={6}
-        >
+        <Card p={6}>
           <HStack justify="space-between" mb={4} align="center">
             <Heading size="sm" color="text.primary">Real-Time Telemetry</Heading>
             <HStack spacing={3}>
@@ -272,7 +267,7 @@ export default function ISSLivePage() {
               </GridItem>
             </Grid>
           )}
-        </Box>
+        </Card>
 
         {/* Live map */}
         <Box>
@@ -284,18 +279,9 @@ export default function ISSLivePage() {
               positions={positions}
             />
           ) : (
-            <Box
-              h="420px"
-              bg="bg.card"
-              borderRadius="xl"
-              border="1px solid"
-              borderColor="border.default"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-            >
+            <Card h="420px" display="flex" alignItems="center" justifyContent="center">
               <Spinner size="xl" color="blue.400" thickness="4px" />
-            </Box>
+            </Card>
           )}
           <Text fontSize="xs" color="text.secondary" mt={2} textAlign="right">
             Blue trail = last 7.5 min of orbital path · Map auto-centres every 5 s

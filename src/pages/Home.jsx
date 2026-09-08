@@ -43,11 +43,8 @@ import { useCountdown } from "../hooks/useCountdown";
 import { usePageMeta } from "../hooks/usePageMeta";
 import ErrorState from "../components/ErrorState";
 import StaleDataNotice from "../components/StaleDataNotice";
-
-const pulse = keyframes`
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
-`;
+import Card from "../components/Card";
+import { pulseOpacity } from "../utils/animations";
 
 // Slow opacity breathe for the hero watermark; deliberately its own
 // keyframes rather than reusing `pulse` (that one swings 1 <-> 0.4, tuned
@@ -164,7 +161,7 @@ function NextLaunchPanel() {
       _hover={{ borderColor: "rgba(0,255,157,0.55)", bg: "rgba(0,255,157,0.08)", textDecoration: "none" }}
     >
       <HStack spacing={2}>
-        <Box as={FaRocket} color="accent.terminal" boxSize="10px" animation={`${pulse} 2s ease-in-out infinite`} />
+        <Box as={FaRocket} color="accent.terminal" boxSize="10px" animation={`${pulseOpacity} 2s ease-in-out infinite`} />
         <Text fontSize="10px" color="accent.terminal" fontWeight="bold" letterSpacing="0.2em" textTransform="uppercase">
           Next Launch
         </Text>
@@ -359,11 +356,9 @@ export default function Home() {
           </Heading>
         </Box>
 
-        <Flex
-          bg="bg.card"
-          border="1px solid"
-          borderColor="border.default"
-          rounded="2xl"
+        <Card
+          as={Flex}
+          borderRadius="2xl"
           overflow="hidden"
           shadow="lg"
           direction={{ base: "column", lg: "row" }}
@@ -544,7 +539,7 @@ export default function Home() {
               {credit}
             </Text>
           </VStack>
-        </Flex>
+        </Card>
       </VStack>
     );
   };
@@ -554,15 +549,7 @@ export default function Home() {
     <Box py={16} px={6}>
       <Container maxW="7xl">
         {/* Mission-control hero: brand + copy left, live countdown right */}
-        <Box
-          position="relative"
-          bg="bg.card"
-          border="1px solid"
-          borderColor="border.default"
-          rounded="2xl"
-          overflow="hidden"
-          p={{ base: 8, md: 12 }}
-        >
+        <Card position="relative" borderRadius="2xl" overflow="hidden" p={{ base: 8, md: 12 }}>
           {/* Emblem watermark: the logo, static (no rotation/reshaping),
               breathing slowly in place. Screen blend melts its black field
               into the card, same as the original watermark. Centered while
@@ -668,7 +655,7 @@ export default function Home() {
 
             <NextLaunchPanel />
           </Flex>
-        </Box>
+        </Card>
 
         {/* Quick links to the rest of the site */}
         <Box mt={6}>

@@ -4,7 +4,6 @@ import {
   Badge,
   Box,
   Container,
-  Flex,
   HStack,
   Heading,
   Icon,
@@ -16,9 +15,13 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { ChevronLeftIcon, ExternalLinkIcon } from '@chakra-ui/icons';
-import { FaMapMarkerAlt, FaRocket, FaSatellite, FaCloudSun } from 'react-icons/fa';
+import { FaRocket, FaCloudSun } from 'react-icons/fa';
 import ErrorState from '../components/ErrorState';
 import Breadcrumbs from '../components/Breadcrumbs';
+import StatusBadge from '../components/StatusBadge';
+import LaunchMetaLine from '../components/LaunchMetaLine';
+import LaunchHero from '../components/LaunchHero';
+import Card from '../components/Card';
 import CountdownDisplay from '../components/launch/CountdownDisplay';
 import WebcastPanel from '../components/launch/WebcastPanel';
 import MissionUpdates from '../components/launch/MissionUpdates';
@@ -171,95 +174,22 @@ export default function LaunchDetailPage() {
         </Link>
 
         {/* Hero */}
-        <Box position="relative" rounded="2xl" overflow="hidden" minH="300px">
-          {launch.image && (
-            <Box
-              position="absolute"
-              inset={0}
-              bgImage={`url(${launch.image})`}
-              bgSize="cover"
-              bgPos="center"
-              filter="brightness(0.45) saturate(0.9)"
-              transform="scale(1.06)"
-            />
-          )}
-          <Box
-            position="absolute"
-            inset={0}
-            bgGradient="linear(to-r, rgba(6,9,26,0.95) 25%, rgba(6,9,26,0.6) 55%, rgba(6,9,26,0.2))"
-          />
-
-          <Flex
-            position="relative"
-            p={{ base: 6, md: 10 }}
-            minH="300px"
-            align="center"
-            justify="space-between"
-            gap={{ base: 8, md: 12 }}
-            direction={{ base: 'column', lg: 'row' }}
-          >
-            <VStack align={{ base: 'center', lg: 'start' }} spacing={4} flex={1} maxW={{ lg: '560px' }}>
-              <HStack spacing={2} flexWrap="wrap" justify={{ base: 'center', lg: 'flex-start' }}>
-                <Badge colorScheme={style.colorScheme} variant="subtle" rounded="full" px={3} py={0.5}>
-                  {style.label}
+        <LaunchHero
+          image={launch.image}
+          eyebrow={
+            <>
+              <StatusBadge status={launch.status} size="sm" />
+              {launch.program?.map((program) => (
+                <Badge key={program.id} variant="outline" rounded="full" px={3} py={0.5}>
+                  {program.name}
                 </Badge>
-                {launch.program?.map((program) => (
-                  <Badge key={program.id} variant="outline" rounded="full" px={3} py={0.5}>
-                    {program.name}
-                  </Badge>
-                ))}
-              </HStack>
-
-              <Heading
-                as="h1"
-                size={{ base: 'xl', md: '2xl' }}
-                lineHeight="1.15"
-                textAlign={{ base: 'center', lg: 'left' }}
-              >
-                {displayName}
-              </Heading>
-
-              <VStack align={{ base: 'center', lg: 'start' }} spacing={1.5}>
-                {provider && (
-                  <HStack color="text.secondary" fontSize="sm" spacing={2}>
-                    <Icon as={FaSatellite} boxSize={3} flexShrink={0} />
-                    <Text>{provider}</Text>
-                    {rocket && (
-                      <>
-                        <Text color="whiteAlpha.300">·</Text>
-                        <Text color="text.primary" fontWeight="medium">
-                          {rocket}
-                        </Text>
-                      </>
-                    )}
-                  </HStack>
-                )}
-                {pad && (
-                  <HStack color="text.secondary" fontSize="sm" spacing={2}>
-                    <Icon as={FaMapMarkerAlt} boxSize={3} flexShrink={0} />
-                    <Text>{pad}</Text>
-                  </HStack>
-                )}
-                <Text fontSize="xs" color="text.secondary" fontFamily="mono" letterSpacing="wide" mt={1}>
-                  {formatNet(launch)}
-                </Text>
-              </VStack>
-            </VStack>
-
-            <VStack spacing={3} flexShrink={0}>
-              <Text
-                fontSize="10px"
-                color="text.secondary"
-                letterSpacing="0.18em"
-                textTransform="uppercase"
-                fontWeight="semibold"
-              >
-                Time to Launch
-              </Text>
-              <CountdownDisplay launch={launch} />
-            </VStack>
-          </Flex>
-        </Box>
+              ))}
+            </>
+          }
+          heading={displayName}
+          metaLine={<LaunchMetaLine provider={provider} rocket={rocket} pad={pad} net={formatNet(launch)} />}
+          countdown={<CountdownDisplay launch={launch} />}
+        />
 
         <ShareBar launch={launch} />
 
@@ -275,13 +205,7 @@ export default function LaunchDetailPage() {
               <ErrorState status="error" title="Failure" message={launch.failreason} />
             )}
             {(probability != null || launch.weather_concerns) && (
-              <Box
-                bg="bg.card"
-                border="1px solid"
-                borderColor="border.default"
-                borderRadius="xl"
-                p={5}
-              >
+              <Card p={5}>
                 <HStack spacing={3} align="flex-start">
                   <Icon as={FaCloudSun} color="text.secondary" mt={1} />
                   <Box>
@@ -295,7 +219,7 @@ export default function LaunchDetailPage() {
                     )}
                   </Box>
                 </HStack>
-              </Box>
+              </Card>
             )}
           </VStack>
         )}
@@ -306,7 +230,7 @@ export default function LaunchDetailPage() {
             Mission Overview
           </Heading>
           <VStack align="stretch" spacing={6}>
-            <Box bg="bg.card" border="1px solid" borderColor="border.default" borderRadius="xl" p={5}>
+            <Card p={5}>
               <HStack spacing={2} mb={3}>
                 <Icon as={FaRocket} color="text.secondary" />
                 <Text fontWeight="600">
@@ -322,10 +246,10 @@ export default function LaunchDetailPage() {
                   Target orbit: <Text as="span" color="text.primary">{launch.mission.orbit.name}</Text>
                 </Text>
               )}
-            </Box>
+            </Card>
 
             {launch.mission_patches && launch.mission_patches.length > 0 && (
-              <Box bg="bg.card" border="1px solid" borderColor="border.default" borderRadius="xl" p={5}>
+              <Card p={5}>
                 <Heading as="h3" size="sm" mb={4}>
                   Mission Patch
                 </Heading>
@@ -340,7 +264,7 @@ export default function LaunchDetailPage() {
                     />
                   ))}
                 </HStack>
-              </Box>
+              </Card>
             )}
           </VStack>
         </Box>
@@ -366,7 +290,7 @@ export default function LaunchDetailPage() {
               Rocket
             </Heading>
             <VStack align="stretch" spacing={6}>
-              <Box bg="bg.card" border="1px solid" borderColor="border.default" borderRadius="xl" p={5}>
+              <Card p={5}>
                 <Heading as="h3" size="sm" mb={2}>
                   {rocket ?? 'Rocket'}
                 </Heading>
@@ -380,7 +304,7 @@ export default function LaunchDetailPage() {
                     Operated by <Text as="span" color="text.primary">{provider}</Text>
                   </Text>
                 )}
-              </Box>
+              </Card>
               <LaunchStats launch={launch} />
             </VStack>
           </Box>
@@ -392,7 +316,7 @@ export default function LaunchDetailPage() {
             <Heading as="h2" size="md" mb={4}>
               Launch Site
             </Heading>
-            <Box bg="bg.card" border="1px solid" borderColor="border.default" borderRadius="xl" p={5}>
+            <Card p={5}>
               <Text fontSize="sm">{launch.pad.name}</Text>
               {launch.pad.location?.name && (
                 <Text fontSize="sm" color="text.secondary">
@@ -411,7 +335,7 @@ export default function LaunchDetailPage() {
                   </Link>
                 )}
               </HStack>
-            </Box>
+            </Card>
           </Box>
         )}
 
@@ -421,7 +345,7 @@ export default function LaunchDetailPage() {
             Mission Status
           </Heading>
           <VStack align="stretch" spacing={6}>
-            <Box bg="bg.card" border="1px solid" borderColor="border.default" borderRadius="xl" p={5}>
+            <Card p={5}>
               <Text fontSize="sm">
                 This mission is currently{' '}
                 <Text as="span" fontWeight="600" color="text.primary">
@@ -429,10 +353,10 @@ export default function LaunchDetailPage() {
                 </Text>
                 .
               </Text>
-            </Box>
+            </Card>
 
             {launch.infoURLs && launch.infoURLs.length > 0 && (
-              <Box bg="bg.card" border="1px solid" borderColor="border.default" borderRadius="xl" p={5}>
+              <Card p={5}>
                 <Heading as="h3" size="sm" mb={3}>
                   More Information
                 </Heading>
@@ -443,7 +367,7 @@ export default function LaunchDetailPage() {
                     </Link>
                   ))}
                 </VStack>
-              </Box>
+              </Card>
             )}
           </VStack>
         </Box>
