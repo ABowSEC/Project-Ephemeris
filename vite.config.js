@@ -18,6 +18,12 @@ export default defineConfig({
         // public/icons are ~1 MB each and cached at runtime instead
         globPatterns: ['**/*.{js,css,html}', 'icons/icon-*.png', 'icons/apple-touch-icon.png', '*.svg'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // Static files served straight from Cloudflare (sitemaps, robots.txt,
+        // the edge API) are not app routes. Without this, generateSW's default
+        // navigateFallback catches any browser navigation to them and serves
+        // index.html instead, so the SPA's catch-all route renders "Page Not
+        // Found" in place of the real XML/text response.
+        navigateFallbackDenylist: [/^\/sitemap.*\.xml$/, /^\/robots\.txt$/, /^\/api\//],
         runtimeCaching: [
           {
             // Launch data (direct API or our /api/launches edge proxy):
