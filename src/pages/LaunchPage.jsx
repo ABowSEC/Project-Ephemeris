@@ -28,8 +28,7 @@ import { pulseOpacity } from "../utils/animations";
 
 export default function LaunchPage() {
   usePageMeta("/launches");
-  const { launches, loading, stale, fetchedAt } = useUpcomingLaunches();
-  const nextLaunch = launches[0] ?? null;
+  const { nextLaunch, loading, stale, fetchedAt, refresh } = useUpcomingLaunches();
 
   return (
     <Container maxW="8xl" py={8}>
@@ -96,7 +95,7 @@ export default function LaunchPage() {
               ) : nextLaunch ? (
                 <CountdownDisplay launch={nextLaunch} />
               ) : null}
-              <StaleDataNotice stale={stale} fetchedAt={fetchedAt} />
+              <StaleDataNotice stale={stale} fetchedAt={fetchedAt} onRefresh={refresh} />
             </>
           }
         />

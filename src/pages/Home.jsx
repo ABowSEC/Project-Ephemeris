@@ -41,6 +41,7 @@ import { useApi } from "../hooks/useApi";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { useCountdown } from "../hooks/useCountdown";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { launchTime } from "../utils/launchFields";
 import ErrorState from "../components/ErrorState";
 import StaleDataNotice from "../components/StaleDataNotice";
 import Card from "../components/Card";
@@ -129,9 +130,8 @@ function QuickLinks() {
 }
 
 function NextLaunchPanel() {
-  const { launches, loading, stale, fetchedAt } = useUpcomingLaunches();
-  const next = launches[0] ?? null;
-  const countdown = useCountdown(next?.window_start);
+  const { nextLaunch: next, loading, stale, fetchedAt, refresh } = useUpcomingLaunches();
+  const countdown = useCountdown(launchTime(next));
 
   if (loading) {
     return (
@@ -202,7 +202,7 @@ function NextLaunchPanel() {
         </HStack>
       )}
 
-      <StaleDataNotice stale={stale} fetchedAt={fetchedAt} />
+      <StaleDataNotice stale={stale} fetchedAt={fetchedAt} onRefresh={refresh} />
     </VStack>
   );
 }

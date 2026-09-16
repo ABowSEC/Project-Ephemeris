@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useApi } from './useApi';
 import { getUpcomingLaunches, getUpcomingLaunchesFetchedAt, FRESH_MS } from '../services/launchStore';
+import { hasFlown } from '../data/launchStatus';
 
 // Well beyond the normal refresh cadence (5-15 min, see FRESH_MS), so a
 // routine refetch delay never trips this — only a sustained run of failures
@@ -14,12 +15,23 @@ const STALE_WARNING_MS = 45 * 60 * 1000;
  * however many components mount this, the app still makes at most one
  * network request per freshness window.
  *
- * @returns {{ launches: Array, loading: boolean, error: string|null, refetch: Function, stale: boolean, fetchedAt: number|null }}
+ * @returns {{ launches: Array, nextLaunch: Object|null, loading: boolean, error: string|null, refetch: Function, refresh: Function, stale: boolean, fetchedAt: number|null }}
  */
 export function useUpcomingLaunches() {
   // The store manages its own request lifecycle, so the abort signal from
   // useApi is unused; useApi still guards against state updates after unmount.
-  const { data, loading, error, refetch } = useApi(() => getUpcomingLaunches());
+  const { data, loading, error, refetch } = useApi((signal, { force } = {}) => getUpcomingLaunches({ force }));
+
+  const launches = data?.results ?? [];
+
+  // The feed is sorted by T-0 ascending, but its first entry isn't
+  // necessarily what should be highlighted as "next": once a launch's
+  // status has resolved to a terminal one (Success/Failure/Partial
+  // Failure), it has already flown, and the upstream feed can lag behind
+  // that for a stretch before dropping the entry. Skip past any already-
+  // flown entries so the header/hero always lands on the nearest one still
+  // ahead of us.
+  const nextLaunch = launches.find((launch) => !hasFlown(launch.status)) ?? null;
 
   useEffect(() => {
     const id = setInterval(() => refetch({ background: true }), FRESH_MS);
@@ -33,5 +45,10 @@ export function useUpcomingLaunches() {
   const fetchedAt = getUpcomingLaunchesFetchedAt();
   const stale = fetchedAt != null && Date.now() - fetchedAt > STALE_WARNING_MS;
 
-  return { launches: data?.results ?? [], loading, error, refetch, stale, fetchedAt };
+  // For the manual "refresh" action on the stale-data notice: bypasses the
+  // freshness check so it actually reaches the proxy instead of replaying
+  // the same stale localStorage copy the user is trying to get rid of.
+  const refresh = useCallback(() => refetch({ force: true }), [refetch]);
+
+  return { launches, nextLaunch, loading, error, refetch, refresh, stale, fetchedAt };
 }

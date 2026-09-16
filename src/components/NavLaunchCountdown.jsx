@@ -3,6 +3,7 @@ import { Box, HStack, Text } from '@chakra-ui/react';
 import { keyframes } from '@emotion/react';
 import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches';
 import { useCountdown } from '../hooks/useCountdown';
+import { launchTime } from '../utils/launchFields';
 
 // Radar ping: the dot stays lit and emits a soft expanding ring, reading
 // as a live signal rather than a blinking light
@@ -23,9 +24,8 @@ function formatCountdown({ d, h, m, s }) {
 export default function NavLaunchCountdown() {
   // Errors are deliberately not rendered: the readout is decorative, so on
   // failure we keep showing the last good launch or hide entirely.
-  const { launches, loading, stale } = useUpcomingLaunches();
-  const nextLaunch = launches[0] ?? null;
-  const timeLeft = useCountdown(nextLaunch?.window_start);
+  const { nextLaunch, loading, stale } = useUpcomingLaunches();
+  const timeLeft = useCountdown(launchTime(nextLaunch));
 
   const name = nextLaunch?.name ?? null;
 
@@ -49,7 +49,7 @@ export default function NavLaunchCountdown() {
       rounded="md"
       transition="background 0.2s"
       _hover={{ bg: 'whiteAlpha.50', textDecoration: 'none' }}
-      title={stale ? 'Launch data may be outdated — we\'re having trouble refreshing it' : undefined}
+      title={stale ? 'Launch data may be outdated, we\'re having trouble refreshing it' : undefined}
     >
       <Box
         boxSize="6px"
