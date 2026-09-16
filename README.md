@@ -63,7 +63,7 @@ TypeScript is being adopted incrementally: new code is written in `.ts`/`.tsx` u
 
 ## Support
 
-Ephemeris is free and ad-free. If it's useful to you, you can support development on [Ko-fi](https://ko-fi.com/abowsec) or [GitHub Sponsors](https://github.com/sponsors/ABowSEC).
+Ephemeris is free and ad-free. If it's useful to you, you can support development and the tools/API's I used on [Ko-fi](https://ko-fi.com/abowsec) or [GitHub Sponsors](https://github.com/sponsors/ABowSEC).
 
 ## License
 
