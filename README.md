@@ -1,6 +1,6 @@
 # Ephemeris
 
-Live spaceflight dashboard: rocket launch tracking, a world launch map, ISS telemetry, Mars imagery, and NASA's picture of the day, all in a single installable React PWA.
+Live spaceflight dashboard: rocket launch tracking, a world launch map, ISS telemetry, Mars imagery, and NASA's picture of the day, all in a single installable React PWA with your own api key or viewable live page here utilizing the server
 
 ## Quick Start
 
