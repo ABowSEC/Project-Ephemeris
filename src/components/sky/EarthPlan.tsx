@@ -11,6 +11,7 @@ import {
   skyPosition,
   subsolarPoint,
 } from '../../utils/sky';
+import { missionName } from './skyText';
 import { VISIBILITY, nearestLaunch, padGlow, type PadGroup, type SkyLaunch } from './skyLaunches';
 
 // Plan view of the Earth: an orthographic globe drawn as a dot matrix rather
@@ -332,7 +333,8 @@ export default function EarthPlan({ observer, time, pads, selected, onSelect }: 
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#06091A';
         ctx.fillStyle = '#E2E8F0';
-        const label = launch.name.length > 30 ? `${launch.name.slice(0, 29)}…` : launch.name;
+        const short = missionName(launch.name);
+        const label = short.length > 30 ? `${short.slice(0, 29)}…` : short;
         const width = ctx.measureText(label).width;
         // Prefer the side facing the centre, then clamp so it never leaves the canvas
         const towardCentre = s.x > mid ? -dotRadius - 8 - width : dotRadius + 8;

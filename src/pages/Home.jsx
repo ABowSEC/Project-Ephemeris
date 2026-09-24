@@ -38,28 +38,12 @@ import { Link as RouterLink } from "react-router-dom";
 import { FaRocket, FaMapMarkerAlt } from "react-icons/fa";
 import { fetchJson } from "../utils/fetchJson";
 import { useApi } from "../hooks/useApi";
-import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
-import { useCountdown } from "../hooks/useCountdown";
 import { usePageMeta } from "../hooks/usePageMeta";
-import { launchTime } from "../utils/launchFields";
 import ErrorState from "../components/ErrorState";
 import StaleDataNotice from "../components/StaleDataNotice";
 import Card from "../components/Card";
-import { pulseOpacity } from "../utils/animations";
+import SkySection from "../components/sky/SkySection";
 
-// Slow opacity breathe for the hero watermark; deliberately its own
-// keyframes rather than reusing `pulse` (that one swings 1 <-> 0.4, tuned
-// for a small fully-opaque status dot, not a large low-opacity watermark -
-// animating opacity overrides a static opacity prop on the same element
-// rather than multiplying with it, so the intended low-opacity range has to
-// be baked into the keyframes directly).
-const breathe = keyframes`
-  0%, 100% { opacity: 0.14; }
-  50%       { opacity: 0.30; }
-`;
-
-// Compact live next-launch panel for the hero; shares the app-wide cached
-// launch data so it costs no extra API requests.
 // Quick links to the sections the hero CTAs don't cover. Flight-console
 // index: numbered hairline rows sharing one accent, not an icon-card grid
 const QUICK_LINKS = [
@@ -126,84 +110,6 @@ function QuickLinks() {
         </Flex>
       ))}
     </Box>
-  );
-}
-
-function NextLaunchPanel() {
-  const { nextLaunch: next, loading, stale, fetchedAt, refresh } = useUpcomingLaunches();
-  const countdown = useCountdown(launchTime(next));
-
-  if (loading) {
-    return (
-      <Box minW={{ base: "auto", md: "300px" }} textAlign="center" py={8}>
-        <Spinner color="accent.terminal" thickness="3px" />
-      </Box>
-    );
-  }
-  if (!next) return null;
-
-  const pad = (n) => String(n).padStart(2, "0");
-
-  return (
-    <VStack
-      as={RouterLink}
-      to="/launches"
-      align="stretch"
-      spacing={3}
-      bg="rgba(0,255,157,0.04)"
-      border="1px solid"
-      borderColor="rgba(0,255,157,0.25)"
-      rounded="xl"
-      p={6}
-      minW={{ base: "100%", md: "320px" }}
-      maxW="360px"
-      transition="all 0.2s"
-      _hover={{ borderColor: "rgba(0,255,157,0.55)", bg: "rgba(0,255,157,0.08)", textDecoration: "none" }}
-    >
-      <HStack spacing={2}>
-        <Box as={FaRocket} color="accent.terminal" boxSize="10px" animation={`${pulseOpacity} 2s ease-in-out infinite`} />
-        <Text fontSize="10px" color="accent.terminal" fontWeight="bold" letterSpacing="0.2em" textTransform="uppercase">
-          Next Launch
-        </Text>
-        {next.status?.abbrev && (
-          <Badge colorScheme={next.status.abbrev === "Go" ? "green" : "gray"} variant="subtle" fontSize="10px" rounded="full" ml="auto">
-            {next.status.abbrev}
-          </Badge>
-        )}
-      </HStack>
-
-      <Text fontWeight="bold" color="text.primary" fontSize="md" noOfLines={2}>
-        {next.name}
-      </Text>
-
-      {countdown ? (
-        <Text
-          fontFamily="mono"
-          fontSize="3xl"
-          fontWeight="bold"
-          color="accent.terminal"
-          letterSpacing="wide"
-          lineHeight="1"
-          sx={{ fontVariantNumeric: "tabular-nums" }}
-        >
-          {countdown.d > 0 && `${countdown.d}d `}
-          {pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)}
-        </Text>
-      ) : (
-        <Badge colorScheme="green" alignSelf="start" rounded="full" px={3}>
-          Launched!
-        </Badge>
-      )}
-
-      {next.pad?.location?.name && (
-        <HStack color="text.secondary" fontSize="xs" spacing={2}>
-          <Box as={FaMapMarkerAlt} boxSize="10px" flexShrink={0} />
-          <Text noOfLines={1}>{next.pad.location.name}</Text>
-        </HStack>
-      )}
-
-      <StaleDataNotice stale={stale} fetchedAt={fetchedAt} onRefresh={refresh} />
-    </VStack>
   );
 }
 
@@ -548,114 +454,8 @@ export default function Home() {
   return (
     <Box py={16} px={6}>
       <Container maxW="7xl">
-        {/* Mission-control hero: brand + copy left, live countdown right */}
-        <Card position="relative" borderRadius="2xl" overflow="hidden" p={{ base: 8, md: 12 }}>
-          {/* Emblem watermark: the logo, static (no rotation/reshaping),
-              breathing slowly in place. Screen blend melts its black field
-              into the card, same as the original watermark. Centered while
-              the hero is stacked (below lg) so the card's overflow clip
-              never crops it at mid-size windows. */}
-          <Image
-            src="/icons/icon-512.png"
-            alt=""
-            aria-hidden="true"
-            position="absolute"
-            right={{ base: "50%", lg: "340px" }}
-            top="50%"
-            transform={{ base: "translate(50%, -50%)", lg: "translateY(-50%)" }}
-            boxSize={{ base: "360px", md: "460px" }}
-            opacity={prefersReducedMotion ? 0.22 : undefined}
-            mixBlendMode="screen"
-            pointerEvents="none"
-            draggable={false}
-            sx={{
-              animation: prefersReducedMotion ? undefined : `${breathe} 6s ease-in-out infinite`,
-            }}
-          />
-
-          <Flex
-            position="relative"
-            direction={{ base: "column", lg: "row" }}
-            align="center"
-            justify="space-between"
-            gap={{ base: 10, lg: 12 }}
-          >
-            <VStack
-              align={{ base: "center", lg: "start" }}
-              textAlign={{ base: "center", lg: "left" }}
-              spacing={5}
-              maxW={{ lg: "560px" }}
-            >
-              <Text
-                fontSize="10px"
-                color="brand.400"
-                fontWeight="bold"
-                letterSpacing="0.25em"
-                textTransform="uppercase"
-              >
-                Ephemeris · Mission Control
-              </Text>
-
-              <Heading
-                as="h1"
-                fontSize="clamp(2rem, 4.5vw, 2.75rem)"
-                fontWeight="700"
-                letterSpacing="-0.02em"
-                lineHeight="1.12"
-                color="text.primary"
-                sx={{ textWrap: 'balance' }}
-              >
-                The sky has a schedule.
-              </Heading>
-
-              <Text fontSize="lg" color="text.secondary" maxW="44ch">
-                Live launch countdowns, a world launch map, and imagery from
-                Earth orbit and beyond.
-              </Text>
-
-              {/* CTAs stack on phones: side by side they overflow the card */}
-              <Stack
-                direction={{ base: "column", sm: "row" }}
-                spacing={4}
-                pt={2}
-                w={{ base: "full", sm: "auto" }}
-              >
-                <Button
-                  as={RouterLink}
-                  to="/launches"
-                  size="lg"
-                  colorScheme="brand"
-                  _hover={
-                    prefersReducedMotion
-                      ? { boxShadow: '0 8px 25px rgba(56,178,172,0.35)' }
-                      : { transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(56,178,172,0.35)' }
-                  }
-                  _active={prefersReducedMotion ? undefined : { transform: 'translateY(0)' }}
-                  transition="transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease"
-                >
-                  View Launches
-                </Button>
-                <Button
-                  as={RouterLink}
-                  to="/map"
-                  size="lg"
-                  variant="outline"
-                  colorScheme="brand"
-                  _hover={
-                    prefersReducedMotion
-                      ? { bg: 'whiteAlpha.50' }
-                      : { transform: 'translateY(-2px)', bg: 'whiteAlpha.50' }
-                  }
-                  transition="transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease"
-                >
-                  World Map
-                </Button>
-              </Stack>
-            </VStack>
-
-            <NextLaunchPanel />
-          </Flex>
-        </Card>
+        {/* Can I see a launch from here? The answer first, the sky instrument one click below */}
+        <SkySection />
 
         {/* Quick links to the rest of the site */}
         <Box mt={6}>
