@@ -26,6 +26,7 @@ import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches';
 import { formatCoords, useObserver } from '../hooks/useObserver';
 import { VIEWING_SPOTS } from '../data/viewingSpots';
 import { launchPath } from '../utils/launchFields';
+import { hasFlown } from '../data/launchStatus';
 import { PLUME_ALTITUDE_KM, compass, skyPhase, skyPosition, sunHorizontal } from '../utils/sky';
 import Card from '../components/Card';
 import StaleDataNotice from '../components/StaleDataNotice';
@@ -72,6 +73,11 @@ export default function SkyPage() {
 
   const skyLaunches = useMemo(() => toSkyLaunches(launches), [launches]);
   const pads = useMemo(() => groupByPad(skyLaunches), [skyLaunches]);
+  // Upcoming launches left out for lack of a firm time or a real pad
+  const unplaced = useMemo(
+    () => launches.filter((l) => !hasFlown(l.status)).length - skyLaunches.length,
+    [launches, skyLaunches]
+  );
 
   // The track starts at page load. Held in state so it stays put while the
   // clock moves; NOW snaps the cursor back to the real present, not the start.
@@ -379,6 +385,11 @@ export default function SkyPage() {
                     ? 'Loading schedule'
                     : `${rows.length} launches, ${inSightCount} in sight from here`}
                 </Text>
+                {unplaced > 0 && !loading && (
+                  <Text fontSize="xs" color="text.secondary">
+                    {unplaced} more without a firm launch time {unplaced === 1 ? 'is' : 'are'} left out.
+                  </Text>
+                )}
               </Box>
               <HStack as="label" spacing={2} fontSize="sm" color="text.secondary" cursor="pointer">
                 <Text>In sight only</Text>

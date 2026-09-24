@@ -1,7 +1,13 @@
 // The slice of a launch the sky view needs, and the grouping both views share.
 
 import type { AnyLaunch } from '../../types/launchLibrary';
-import { launchDate, padCoordinates, providerName, rocketName } from '../../utils/launchFields';
+import {
+  hasPreciseTime,
+  launchDate,
+  padCoordinates,
+  providerName,
+  rocketName,
+} from '../../utils/launchFields';
 import { hasFlown } from '../../data/launchStatus';
 import type { Visibility } from '../../utils/sky';
 
@@ -29,14 +35,26 @@ export interface PadGroup {
   launches: SkyLaunch[];
 }
 
-/** Launches that can be placed: not yet flown, with a T-0 and pad coordinates. */
+/**
+ * Launches the sky view can honestly place: not yet flown, with a T-0 firm to
+ * the hour and real pad coordinates.
+ *
+ * Both conditions are accuracy, not tidiness. Whether a launch is in daylight,
+ * twilight or darkness turns on the hour, so a launch pinned only to a day,
+ * month or quarter has no meaningful verdict; upstream still supplies a full
+ * timestamp for those, which would otherwise be treated as real. And an
+ * unknown pad is sometimes filed at 0,0 (open ocean off Africa), which would
+ * plot a launch where no launch site is.
+ */
 export function toSkyLaunches(launches: AnyLaunch[]): SkyLaunch[] {
   const out: SkyLaunch[] = [];
   for (const launch of launches) {
     if (hasFlown(launch.status)) continue;
+    if (!hasPreciseTime(launch)) continue;
     const date = launchDate(launch);
     const coordinates = padCoordinates(launch);
     if (!date || !coordinates) continue;
+    if (coordinates.lat === 0 && coordinates.lon === 0) continue;
     out.push({
       id: launch.id,
       slug: launch.slug,
