@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p functions",
     "preview": "vite preview",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "land-mask": "node scripts/gen-land-mask.mjs"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.0.17",

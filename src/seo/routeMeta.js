@@ -35,6 +35,11 @@ export const routeMeta = {
     description:
       'Interactive world map of rocket launch sites with upcoming missions from Cape Canaveral, Starbase, Vandenberg, Baikonur, and beyond.',
   },
+  '/sky': {
+    title: 'Launch Sky Viewer',
+    description:
+      'Which rocket launches can you see from where you are? Scrub through the next two weeks on a live sky dome and Earth plan, with line of sight, twilight plume windows, and where to look.',
+  },
   '/mars': {
     title: 'Mars Rover Photos',
     description:

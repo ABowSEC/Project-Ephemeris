@@ -35,6 +35,7 @@ const Home = lazy(() => import('./pages/Home'));
 const LaunchPage = lazy(() => import('./pages/LaunchPage'));
 const LaunchDetailPage = lazy(() => import('./pages/LaunchDetailPage'));
 const LaunchMapPage = lazy(() => import('./pages/LaunchMapPage'));
+const SkyPage = lazy(() => import('./pages/SkyPage'));
 const MarsPage = lazy(() => import('./pages/MarsPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 const SolarSimPage = lazy(() => import('./pages/SolarSimPage'));
@@ -68,7 +69,8 @@ const navigationItems = [
   // than the top bar, since the map is a view of launch data, not a peer
   // section. The route, its metadata, and its sitemap entry all still stand.
   { path: '/launches', label: 'Launches' },
-  { path: '/mars',     label: 'Mars' },
+  { path: '/sky',      label: 'Sky' },
+  { path: '/mars',    label: 'Mars' },
   { path: '/explore',  label: 'Explore' },
   { path: '/iss',      label: 'ISS' },
 ];
@@ -276,6 +278,7 @@ function AnimatedRoutes() {
             <Route path="/launches"  element={<LaunchPage />} />
             <Route path="/launches/:slug" element={<LaunchDetailPage />} />
             <Route path="/map"       element={<LaunchMapPage />} />
+            <Route path="/sky"       element={<SkyPage />} />
             <Route path="/mars"      element={<MarsPage />} />
             <Route path="/iss"       element={<ISSLivePage />} />
             <Route path="/solarsim"  element={<SolarSimPage />} />
