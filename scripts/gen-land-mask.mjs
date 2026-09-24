@@ -1,4 +1,5 @@
-// Bakes a 1-degree land/ocean bitmap from the Blue Marble texture into
+// Bakes a 1-degree land/ocean bitmap from the Blue Marble texture (kept in
+// scripts/assets, not public/, so it is never deployed) into
 // src/data/landMask.ts, so the sky view's plan projection can draw a dot-matrix
 // Earth without shipping or decoding a 1.4 MB image at runtime.
 //
@@ -21,7 +22,7 @@ const ROWS = 180;
 // above it, and ice caps are bright in every channel.
 const isLand = (r, g, b) => r > b * 0.82 || (r > 150 && g > 150 && b > 150);
 
-const { data, info } = await sharp(resolve(root, 'public/textures/earth-blue-marble.jpg'))
+const { data, info } = await sharp(resolve(root, 'scripts/assets/earth-blue-marble.jpg'))
   .removeAlpha()
   .raw()
   .toBuffer({ resolveWithObject: true });

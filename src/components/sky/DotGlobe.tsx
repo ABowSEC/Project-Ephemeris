@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box, Button } from '@chakra-ui/react';
-import type { Observer } from '../../hooks/useObserver';
 import { LAND_MASK_BASE64, LAND_MASK_COLS, LAND_MASK_ROWS } from '../../data/landMask';
 import {
   PLUME_ALTITUDE_KM,
@@ -8,13 +7,10 @@ import {
   bearing,
   destination,
   horizonDip,
-  skyPosition,
   subsolarPoint,
 } from '../../utils/sky';
-import { missionName } from './skyText';
-import { VISIBILITY, nearestLaunch, padGlow, type PadGroup, type SkyLaunch } from './skyLaunches';
 
-// Plan view of the Earth: an orthographic globe drawn as a dot matrix rather
+// A dot-matrix Earth: an orthographic globe drawn as a dot matrix rather
 // than a photograph. Land is dots, coloured by how high the Sun stands at that
 // spot, so the terminator and the twilight bands read as a gradient of light
 // rather than a hard line. Everything on it is computed, not fetched.
@@ -99,52 +95,105 @@ const BANDS = [
   { min: -90, color: '60,75,120', alpha: 0.32 },
 ];
 
-interface EarthPlanProps {
-  observer: Observer;
+export interface GlobeMarker {
+  id: string;
+  lat: number;
+  lon: number;
+  /** Hex colour. */
+  color: string;
+  /** Dot radius in px. */
+  radius: number;
+  /** 0 to 1: how strongly it lights up. */
+  glow: number;
+  selected: boolean;
+  /** Drawn beside the dot when present. */
+  label?: string;
+}
+
+interface Point {
+  lat: number;
+  lon: number;
+}
+
+interface DotGlobeProps {
+  /** Moment to light the globe for, ms since the epoch. */
   time: number;
-  pads: PadGroup[];
-  selected: SkyLaunch | null;
-  onSelect: (launch: SkyLaunch) => void;
+  markers: GlobeMarker[];
+  /** Where the globe faces. Changing it turns the globe there; Recenter returns to it. */
+  home: Point;
+  /** When set, draws a "you are here" mark and the line-of-sight ring around it. */
+  observer?: Point | null;
+  /** With an observer, draws the great-circle route to this place. */
+  route?: Point | null;
+  onPick: (id: string) => void;
+  ariaLabel?: string;
+  recenterLabel?: string;
 }
 
 interface Hit {
   x: number;
   y: number;
-  launch: SkyLaunch;
+  id: string;
 }
 
-export default function EarthPlan({ observer, time, pads, selected, onSelect }: EarthPlanProps) {
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+export default function DotGlobe({
+  time,
+  markers,
+  home,
+  observer = null,
+  route = null,
+  onPick,
+  ariaLabel = 'Dot-matrix globe showing daylight, twilight and night, with launch sites.',
+  recenterLabel = 'Recenter',
+}: DotGlobeProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hits = useRef<Hit[]>([]);
   const drag = useRef<{ x: number; y: number; moved: number } | null>(null);
+  const centerRef = useRef<Point>(home);
 
   const [size, setSize] = useState(0);
-  const [center, setCenter] = useState({ lat: observer.lat, lon: observer.lon });
+  const [center, setCenterState] = useState<Point>(home);
+  const setCenter = (next: Point | ((c: Point) => Point)) => {
+    const value = typeof next === 'function' ? next(centerRef.current) : next;
+    centerRef.current = value;
+    setCenterState(value);
+  };
 
-  // Follow the observer when they change; dragging then moves away from it
+  // Turn to face `home` whenever it changes: a short tween along the shorter
+  // way round, or an instant jump for anyone who asked for less motion.
   useEffect(() => {
-    setCenter({ lat: observer.lat, lon: observer.lon });
-  }, [observer.lat, observer.lon]);
+    const from = centerRef.current;
+    if (from.lat === home.lat && from.lon === home.lon) return;
+    if (prefersReducedMotion()) {
+      setCenter(home);
+      return;
+    }
+    const dLon = ((home.lon - from.lon + 540) % 360) - 180;
+    const started = performance.now();
+    let frame = 0;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - started) / 600);
+      const eased = 1 - (1 - t) ** 3;
+      setCenter({ lat: from.lat + (home.lat - from.lat) * eased, lon: from.lon + dLon * eased });
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [home.lat, home.lon]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const update = () => setSize(Math.round(el.getBoundingClientRect().width));
     update();
-    const observerRO = new ResizeObserver(update);
-    observerRO.observe(el);
-    return () => observerRO.disconnect();
+    const resize = new ResizeObserver(update);
+    resize.observe(el);
+    return () => resize.disconnect();
   }, []);
-
-  const padSky = useMemo(
-    () =>
-      pads.map((pad) => {
-        const launch = nearestLaunch(pad, time);
-        return { pad, launch, position: skyPosition(observer, pad, launch.t), glow: padGlow(pad, time) };
-      }),
-    [pads, observer, time]
-  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -282,74 +331,73 @@ export default function EarthPlan({ observer, time, pads, selected, onSelect }: 
     ctx.stroke();
 
     // Line-of-sight ring: inside it a vehicle at ~100 km is above your horizon
-    ctx.strokeStyle = 'rgba(159,122,234,0.75)';
-    ctx.lineWidth = 1.25;
-    ctx.setLineDash([5, 5]);
-    strokePath(circleAround(observer.lat, observer.lon, horizonDip(PLUME_ALTITUDE_KM)));
-    ctx.setLineDash([]);
-
-    // Route from the observer to the selected launch
-    if (selected) {
-      const total = angularDistance(observer.lat, observer.lon, selected.lat, selected.lon);
-      const heading = bearing(observer.lat, observer.lon, selected.lat, selected.lon);
-      const route = [];
-      for (let i = 0; i <= 60; i++) route.push(destination(observer.lat, observer.lon, heading, (total * i) / 60));
-      ctx.strokeStyle = 'rgba(159,122,234,0.9)';
-      ctx.lineWidth = 1.5;
-      strokePath(route);
+    if (observer) {
+      ctx.strokeStyle = 'rgba(159,122,234,0.75)';
+      ctx.lineWidth = 1.25;
+      ctx.setLineDash([5, 5]);
+      strokePath(circleAround(observer.lat, observer.lon, horizonDip(PLUME_ALTITUDE_KM)));
+      ctx.setLineDash([]);
     }
 
-    // Pads
+    // Route from the observer to the place in focus
+    if (observer && route) {
+      const total = angularDistance(observer.lat, observer.lon, route.lat, route.lon);
+      const heading = bearing(observer.lat, observer.lon, route.lat, route.lon);
+      const path = [];
+      for (let i = 0; i <= 60; i++) path.push(destination(observer.lat, observer.lon, heading, (total * i) / 60));
+      ctx.strokeStyle = 'rgba(159,122,234,0.9)';
+      ctx.lineWidth = 1.5;
+      strokePath(path);
+    }
+
+    // Markers
     const nextHits: Hit[] = [];
-    for (const { pad, launch, position, glow } of padSky) {
-      const s = project(pad.lat, pad.lon);
+    for (const marker of markers) {
+      const s = project(marker.lat, marker.lon);
       if (s.depth <= 0) continue;
-      const style = VISIBILITY[position.visibility];
-      const isSelected = pad.launches.some((l) => l.id === selected?.id);
-      const dotRadius = 2.5 + 3 * glow;
+      const { glow, radius: dotRadius, color } = marker;
 
       if (glow > 0.35) {
-        ctx.fillStyle = `${style.hex}${Math.round(60 * glow).toString(16).padStart(2, '0')}`;
+        ctx.fillStyle = `${color}${Math.round(60 * glow).toString(16).padStart(2, '0')}`;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, 8 + 12 * glow, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, dotRadius + 6 + 8 * glow, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.globalAlpha = 0.35 + 0.65 * glow;
-      ctx.fillStyle = style.hex;
+      ctx.globalAlpha = 0.45 + 0.55 * glow;
+      ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(s.x, s.y, dotRadius, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      if (isSelected) {
+      if (marker.selected) {
         ctx.strokeStyle = SELECT;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(s.x, s.y, dotRadius + 5, 0, Math.PI * 2);
         ctx.stroke();
       }
-      if (isSelected || glow > 0.6) {
+      if (marker.label) {
         ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace';
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#06091A';
         ctx.fillStyle = '#E2E8F0';
-        const short = missionName(launch.name);
-        const label = short.length > 30 ? `${short.slice(0, 29)}…` : short;
-        const width = ctx.measureText(label).width;
+        const text = marker.label.length > 30 ? `${marker.label.slice(0, 29)}…` : marker.label;
+        const width = ctx.measureText(text).width;
         // Prefer the side facing the centre, then clamp so it never leaves the canvas
         const towardCentre = s.x > mid ? -dotRadius - 8 - width : dotRadius + 8;
         const lx = Math.max(4, Math.min(size - width - 4, s.x + towardCentre));
         ctx.textAlign = 'left';
-        ctx.strokeText(label, lx, s.y + 3);
-        ctx.fillText(label, lx, s.y + 3);
+        ctx.strokeText(text, lx, s.y + 3);
+        ctx.fillText(text, lx, s.y + 3);
       }
-      nextHits.push({ x: s.x, y: s.y, launch });
+      nextHits.push({ x: s.x, y: s.y, id: marker.id });
     }
     hits.current = nextHits;
 
     // Observer
-    const you = project(observer.lat, observer.lon);
-    if (you.depth > 0) {
+    const you = observer ? project(observer.lat, observer.lon) : null;
+    if (you && you.depth > 0) {
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -366,7 +414,7 @@ export default function EarthPlan({ observer, time, pads, selected, onSelect }: 
       ctx.lineTo(you.x, you.y + 9);
       ctx.stroke();
     }
-  }, [size, center, time, observer, padSky, selected]);
+  }, [size, center, time, observer, route, markers]);
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -405,17 +453,17 @@ export default function EarthPlan({ observer, time, pads, selected, onSelect }: 
         bestDistance = distance;
       }
     }
-    if (best) onSelect(best.launch);
+    if (best) onPick(best.id);
   };
 
-  const recentred = center.lat === observer.lat && center.lon === observer.lon;
+  const recentred = Math.abs(center.lat - home.lat) < 0.01 && Math.abs(center.lon - home.lon) < 0.01;
 
   return (
     <Box ref={wrapRef} position="relative" w="100%" sx={{ aspectRatio: '1 / 1' }}>
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label="Dot-matrix globe showing daylight, twilight and night, with launch pads. The launch list carries the same information."
+        aria-label={ariaLabel}
         style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none', cursor: 'grab' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -431,9 +479,9 @@ export default function EarthPlan({ observer, time, pads, selected, onSelect }: 
           position="absolute"
           top={2}
           right={2}
-          onClick={() => setCenter({ lat: observer.lat, lon: observer.lon })}
+          onClick={() => setCenter(home)}
         >
-          Recenter on me
+          {recenterLabel}
         </Button>
       )}
     </Box>

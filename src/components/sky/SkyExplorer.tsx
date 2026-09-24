@@ -1,12 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Grid, HStack, Text, VStack } from '@chakra-ui/react';
 import type { Observer } from '../../hooks/useObserver';
-import { skyPhase, sunHorizontal } from '../../utils/sky';
-import EarthPlan from './EarthPlan';
+import { skyPhase, skyPosition, sunHorizontal } from '../../utils/sky';
+import DotGlobe, { type GlobeMarker } from './DotGlobe';
 import SkyDome from './SkyDome';
 import TimeScrubber from './TimeScrubber';
-import { SPEEDS, VISIBILITY, type PadGroup, type SkyLaunch } from './skyLaunches';
-import { VERDICT } from './skyText';
+import {
+  SPEEDS,
+  VISIBILITY,
+  nearestLaunch,
+  padGlow,
+  type PadGroup,
+  type SkyLaunch,
+} from './skyLaunches';
+import { VERDICT, missionName } from './skyText';
 
 const SPAN_MINUTES = 14 * 24 * 60;
 const LIVE_TICK_MS = 30_000;
@@ -103,6 +110,35 @@ export default function SkyExplorer({
 
   const sun = sunHorizontal(observer.lat, observer.lon, time);
 
+  // One marker per pad, coloured by how well you could see its nearest launch
+  const markers = useMemo<GlobeMarker[]>(
+    () =>
+      pads.map((pad) => {
+        const launch = nearestLaunch(pad, time);
+        const position = skyPosition(observer, pad, launch.t);
+        const glow = padGlow(pad, time);
+        const isSelected = pad.launches.some((l) => l.id === selectedId);
+        return {
+          id: launch.id,
+          lat: pad.lat,
+          lon: pad.lon,
+          color: VISIBILITY[position.visibility].hex,
+          radius: 2.5 + 3 * glow,
+          glow,
+          selected: isSelected,
+          label: isSelected || glow > 0.6 ? missionName(launch.name) : undefined,
+        };
+      }),
+    [pads, observer, time, selectedId]
+  );
+  const pickMarker = useCallback(
+    (id: string) => {
+      const launch = skyLaunches.find((l) => l.id === id);
+      if (launch) onSelect(launch);
+    },
+    [skyLaunches, onSelect]
+  );
+
   return (
     <VStack align="stretch" spacing={6}>
       <Text color="text.secondary" maxW="70ch">
@@ -128,12 +164,15 @@ export default function SkyExplorer({
 
         <VStack spacing={4}>
           <Box w="100%" maxW="340px">
-            <EarthPlan
-              observer={observer}
+            <DotGlobe
               time={time}
-              pads={pads}
-              selected={selected}
-              onSelect={onSelect}
+              markers={markers}
+              home={observer}
+              observer={observer}
+              route={selected}
+              onPick={pickMarker}
+              ariaLabel="Dot-matrix globe showing daylight, twilight and night, with launch pads. The dome and the launch list carry the same information."
+              recenterLabel="Recenter on me"
             />
           </Box>
           <Text fontSize="sm" color="text.secondary" textAlign="center" maxW="44ch">
