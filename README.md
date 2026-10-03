@@ -34,13 +34,13 @@ cp .env.example .env
 
 On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
 
-Set `VITE_NASA_API_KEY` in `.env` to your own key from [NASA's API portal](https://api.nasa.gov/), or remove the placeholder value to use the shared `DEMO_KEY`. The NASA key is used for APOD; launch tracking, ISS telemetry, and NASA image-library browsing do not require it.
+No API keys are required. APOD, launch tracking, ISS telemetry, and NASA image-library browsing all use public endpoints.
 
 ```bash
 npm run dev
 ```
 
-Open the local URL printed by Vite. NASA's shared demo key has lower request limits, so a personal key is recommended for regular local use. `VITE_` variables are included in the browser bundle; they are not server-side secrets.
+Open the local URL printed by Vite. `VITE_` variables are included in the browser bundle; they are not server-side secrets.
 
 ### Commands
 
@@ -66,7 +66,6 @@ The live site runs on **Cloudflare Pages**. Pages Functions provide cached launc
 Launch responses use an edge cache and an optional shared Workers KV namespace, with cached-data fallback on upstream errors. For a Cloudflare deployment:
 
 - Build with `npm run build` and use `dist` as the output directory.
-- Set `VITE_NASA_API_KEY` as a build-time environment variable for APOD.
 - Optionally bind a Workers KV namespace as `LAUNCHES_CACHE` to share cached launch responses across edge locations.
 - Optionally set `LL2_TOKEN` as a server-side Functions secret for authenticated Launch Library access.
 
@@ -90,7 +89,7 @@ TypeScript adoption is incremental: `.ts` and `.tsx` modules use strict checking
 | Feature | Source |
 | --- | --- |
 | Launch schedules, mission details, and updates | [Launch Library 2 - The Space Devs](https://thespacedevs.com/llapi), cached at the edge and in the browser |
-| Astronomy Picture of the Day | [NASA APOD API](https://api.nasa.gov/) |
+| Astronomy Picture of the Day | [NASA APOD](https://science.nasa.gov/apod/) via `science.nasa.gov/wp-json/wp/v2/apod-basic` |
 | Mars imagery and image search | [NASA Image & Video Library](https://images.nasa.gov/) |
 | ISS position and telemetry | [Where the ISS at?](https://wheretheiss.at/) |
 | ISS video | NASA's YouTube stream |

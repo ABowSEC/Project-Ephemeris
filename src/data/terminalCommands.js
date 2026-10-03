@@ -1,5 +1,6 @@
 import { fetchJson } from '../utils/fetchJson';
 import { getUpcomingLaunches } from '../services/launchStore';
+import { fetchLatestApod } from '../services/apod';
 
 // ── Terminal output line helpers ──────────────────────────────────────────────
 export const C = {
@@ -18,7 +19,6 @@ export const amb = (t) => ({ text: t, color: C.amber });
 export const cyn = (t) => ({ text: t, color: C.cyan  });
 export const sep = ()  => dim('─────────────────────────────────');
 
-const NASA_KEY = () => import.meta.env.VITE_NASA_API_KEY || 'DEMO_KEY';
 
 // ── Boot sequence ─────────────────────────────────────────────────────────────
 export const BOOT_LINES = [
@@ -58,9 +58,7 @@ export const COMMANDS = {
   ],
 
   apod: async () => {
-    const d = await fetchJson(
-      `https://api.nasa.gov/planetary/apod?api_key=${NASA_KEY()}`
-    );
+    const d = await fetchLatestApod();
     const desc = (d.explanation ?? '').slice(0, 220) +
       (d.explanation?.length > 220 ? '...' : '');
     return [

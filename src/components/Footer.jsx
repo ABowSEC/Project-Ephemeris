@@ -4,7 +4,7 @@ import { SiKofi } from "react-icons/si";
 
 const CREDITS = [
   { label: "The Space Devs", href: "https://thespacedevs.com" },
-  { label: "NASA", href: "https://apod.nasa.gov/apod/astropix.html" },
+  { label: "NASA", href: "https://science.nasa.gov/apod/" },
   { label: "OpenFreeMap / OSM", href: "https://openfreemap.org" },
 ];
 

@@ -36,7 +36,7 @@ import {
 } from "@chakra-ui/icons";
 import { Link as RouterLink } from "react-router-dom";
 import { FaRocket, FaMapMarkerAlt } from "react-icons/fa";
-import { fetchJson } from "../utils/fetchJson";
+import { fetchLatestApod } from "../services/apod";
 import { useApi } from "../hooks/useApi";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { useCountdown } from "../hooks/useCountdown";
@@ -235,15 +235,7 @@ async function fetchApod(signal) {
     localStorage.removeItem(cacheKey);
   }
 
-  const apiKey = import.meta.env.VITE_NASA_API_KEY || 'DEMO_KEY';
-  if (apiKey === 'DEMO_KEY') {
-    console.warn('Using DEMO_KEY - limited to 30 requests per hour');
-  }
-
-  const data = await fetchJson(
-    `https://api.nasa.gov/planetary/apod?api_key=${apiKey}`,
-    { signal }
-  );
+  const data = await fetchLatestApod({ signal });
 
   // Cache failures (quota, private browsing) must not fail the fetch.
   // Key the entry by the APOD's own date: if NASA returned yesterday's
@@ -448,7 +440,7 @@ export default function Home() {
                 )}
                 <Image
                   src={imgError ? "/hal9000.png" : apod.url}
-                  alt={apod.title}
+                  alt={apod.alt || apod.title}
                   position="absolute"
                   inset={0}
                   w="100%"
@@ -491,7 +483,7 @@ export default function Home() {
                 </Text>
                 <Button
                   as="a"
-                  href="https://apod.nasa.gov/apod/astropix.html"
+                  href={apod.permalink || "https://science.nasa.gov/apod/"}
                   target="_blank"
                   leftIcon={<ExternalLinkIcon />}
                   colorScheme="brand"
@@ -679,14 +671,16 @@ export default function Home() {
                   leftIcon={<ExternalLinkIcon />}
                   size="sm"
                   variant="outline"
-                  onClick={() => window.open(apod?.url, '_blank')}
+                  onClick={() => window.open(apod?.permalink || apod?.url, '_blank')}
                   colorScheme="brand"
                 >
                   Open Original
                 </Button>
                 {/* Download only for NASA-owned (public domain) images; APODs
                     with a copyright field belong to the photographer and we
-                    shouldn't distribute them */}
+                    shouldn't distribute them. The science.nasa.gov feed
+                    fills copyright on every entry, so this stays hidden
+                    unless NASA starts leaving it blank again. */}
                 {!isVideoApod && !cleanCopyright(apod?.copyright) && (
                   <Button
                     leftIcon={<DownloadIcon />}
