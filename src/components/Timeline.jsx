@@ -192,8 +192,7 @@ export default function Timeline() {
           w="2px"
           h="100%"
           borderRadius="full"
-          bgGradient="linear(to-b, teal.400, purple.400)"
-          boxShadow="0 0 12px var(--chakra-colors-teal-400)"
+          bg="brand.400"
           style={{ scaleY: reduceMotion ? 1 : drawn, transformOrigin: "top" }}
         />
 

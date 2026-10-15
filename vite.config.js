@@ -80,8 +80,8 @@ export default defineConfig({
         short_name: 'Ephemeris',
         description:
           'Track rocket launches worldwide: live countdowns, a world launch map, tracked-launch alerts, and calendar export.',
-        theme_color: '#06091A',
-        background_color: '#06091A',
+        theme_color: '#0A0B0D',
+        background_color: '#0A0B0D',
         display: 'standalone',
         start_url: '/',
         scope: '/',

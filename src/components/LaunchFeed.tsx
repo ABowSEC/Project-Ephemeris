@@ -22,12 +22,15 @@ import LaunchFilters from './LaunchFilters';
 import AlertSettings from './AlertSettings';
 import { useLaunchFilters } from '../hooks/useLaunchFilters';
 import TrackButton from './TrackButton';
+import ProviderMark from './ProviderMark';
+import { LaunchName } from './LaunchHero';
 import CalendarMenu from './launch/CalendarMenu';
 import ErrorState from './ErrorState';
 import StatusBadge from './StatusBadge';
 import { formatNet, launchPath, providerName } from '../utils/launchFields';
 import { useLaunchCountdown } from '../hooks/useCountdown';
 import type { LaunchListItem } from '../types/launchLibrary';
+import { withAlpha } from '../utils/color';
 
 const MotionBox = motion(Box);
 const MotionImage = motion(Image);
@@ -36,20 +39,6 @@ const MotionImage = motion(Image);
 // rendering all of them on a phone is a lot of images for a list most people
 // scan the top of.
 const PAGE_SIZE = 12;
-
-const AGENCY_LOGOS: Record<string, string> = {
-  NASA: '/logos/nasa.jpg',
-  SpaceX: '/logos/spacex.jpeg',
-  ULA: '/logos/ula.jpg',
-  ESA: '/logos/esa.jpg',
-  JAXA: '/logos/jaxa.jpg',
-  'Russian Federal Space Agency (ROSCOSMOS)': '/logos/Roscosmos.jpg',
-  'China Aerospace Science and Technology Corporation': '/logos/casc.jpg',
-  'Blue Origin': '/logos/blueorigin.jpg',
-};
-
-const agencyLogo = (agency: string | null) =>
-  (agency && AGENCY_LOGOS[agency]) || '/logos/defaultAgency.jpg';
 
 /**
  * Compact T-minus line for a card, with the date beneath it. Once there is
@@ -121,20 +110,9 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
       position="relative"
       data-group
       _hover={{
-        shadow: '0 12px 32px -12px var(--chakra-colors-blue-500)',
-        borderColor: 'blue.400',
+        borderColor: 'border.controlHover',
       }}
     >
-      <Box
-        position="absolute"
-        top={0}
-        left={0}
-        right={0}
-        h="3px"
-        bgGradient="linear(to-r, teal.400, blue.400, purple.400)"
-        zIndex={3}
-      />
-
       <Box position="relative" h={{ base: '190px', md: '210px' }} overflow="hidden">
         {launch.image ? (
           <MotionImage
@@ -143,18 +121,18 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
             w="100%"
             h="100%"
             objectFit="cover"
-            fallback={<Box h="100%" bgGradient="linear(to-br, blue.900, purple.900)" />}
+            fallback={<Box h="100%" bg="bg.elevated" />}
             transition="transform 0.7s ease"
             _groupHover={reduceMotion ? undefined : { transform: 'scale(1.06)' }}
           />
         ) : (
-          <Box h="100%" w="100%" bgGradient="linear(to-br, blue.900, purple.900)" />
+          <Box h="100%" w="100%" bg="bg.elevated" />
         )}
 
         <Box
           position="absolute"
           inset={0}
-          bg="linear-gradient(to bottom, rgba(11,17,32,0.15) 0%, rgba(11,17,32,0.15) 45%, rgba(11,17,32,0.92) 100%)"
+          bgImage={`linear-gradient(to bottom, ${withAlpha('bg.card', 15)} 0%, ${withAlpha('bg.card', 15)} 45%, ${withAlpha('bg.card', 92)} 100%)`}
         />
 
         {/* The track and calendar buttons sit above the overlay so using
@@ -175,21 +153,7 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
           align="flex-end"
           zIndex={2}
         >
-          <Box
-            bg="whiteAlpha.900"
-            borderRadius="lg"
-            p={1.5}
-            boxShadow="0 2px 8px rgba(0,0,0,0.4)"
-            flexShrink={0}
-          >
-            <Image
-              src={agencyLogo(provider)}
-              alt=""
-              boxSize="40px"
-              objectFit="contain"
-              fallbackSrc="/logos/defaultAgency.jpg"
-            />
-          </Box>
+          <ProviderMark name={provider} />
           <VStack align="start" spacing={0.5} flex={1} minW={0}>
             <Text
               fontSize="lg"
@@ -199,7 +163,7 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
               noOfLines={2}
               textShadow="0 1px 6px rgba(0,0,0,0.7)"
             >
-              {launch.name}
+              <LaunchName name={launch.name} clamped />
             </Text>
             <Text fontSize="sm" color="whiteAlpha.800" noOfLines={1}>
               {provider ?? 'Unknown provider'}
@@ -248,7 +212,7 @@ export default function LaunchFeed() {
   if (loading) {
     return (
       <VStack spacing={6} py={10}>
-        <Spinner size="xl" color="blue.400" thickness="4px" />
+        <Spinner size="xl" color="brand.primary" thickness="4px" />
         <Text color="text.secondary">Loading upcoming launches...</Text>
       </VStack>
     );

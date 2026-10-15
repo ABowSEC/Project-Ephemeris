@@ -34,7 +34,7 @@ export default function DiscoverLinks() {
             </Text>
             <Box flex="1" minW={0}>
               <Text
-                fontFamily="heading"
+                fontFamily="display"
                 fontSize="sm"
                 fontWeight="600"
                 letterSpacing="0.14em"

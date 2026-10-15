@@ -1,35 +1,45 @@
 import { extendTheme } from '@chakra-ui/react';
 
 const colors = {
-  // Brand ramp built from the logo teal (#38B2AC at 500). Buttons and links
-  // inherit it via colorScheme="brand"; nothing in the app should reach for
-  // stock framework blues.
+  // Vivid brand teal (#2DD4BF), anchored at 200 because that is the shade
+  // Chakra's dark-mode buttons fill with and outline/ghost text uses. Lower
+  // shades are deeper, not brighter: 300 for links, 400 for small labels.
+  // Buttons and links inherit it via colorScheme="brand"; nothing in the app
+  // should reach for stock framework blues.
   brand: {
-    50:  '#e4faf8',
-    100: '#bff0ec',
-    200: '#93e2dc',
-    300: '#65d1c9',
-    400: '#43c0b8',
-    500: '#38B2AC',
-    600: '#2c928e',
-    700: '#227371',
-    800: '#195755',
-    900: '#113f3e',
+    50:  '#EBF9F8',
+    100: '#C7EFEA',
+    200: '#2DD4BF',
+    300: '#2DB0A0',
+    400: '#279889',
+    500: '#207F73',
+    600: '#1A665D',
+    700: '#15524A',
+    800: '#103F3A',
+    900: '#0C2F2B',
   },
-  space: {
-    900: '#03050D',
-    800: '#06091A',
-    700: '#0B1120',
-    600: '#101828',
-    500: '#182135',
-    400: '#243552',
+  // Amber (#F5B942, anchored at 200 like brand) for the things a visitor has
+  // chosen: tracked launches and the alerts that follow them. Warnings
+  // (stale data, holds) stay on Chakra's orange so the two never blur.
+  amber: {
+    50:  '#FCF5E9',
+    100: '#F7E4C0',
+    200: '#F5B942',
+    300: '#E8A624',
+    400: '#D09216',
+    500: '#AE7A12',
+    600: '#8D620F',
+    700: '#714F0C',
+    800: '#573D09',
+    900: '#412D07',
   },
   // Brand palette from the Ephemeris logo sheet. Kept as named accents so the
   // teal→purple mark colors, the terminal-green and HAL-red variants can be
   // referenced directly (e.g. bgGradient="linear(to-r, accent.teal, accent.purple)").
   accent: {
-    teal:     '#38B2AC',
-    tealLight:'#5AD4D1',
+    teal:     '#2DD4BF',
+    tealLight:'#C7EFEA',
+    amber:    '#F5B942',
     purple:   '#9F7AEA',
     terminal: '#00FF9D',
     hal:      '#FF3B30',
@@ -40,20 +50,23 @@ const colors = {
 
 const semanticTokens = {
   colors: {
-    'bg.body':     { default: '#06091A', _dark: '#06091A' },
-    'bg.card':     { default: '#0B1120', _dark: '#0B1120' },
-    'bg.elevated': { default: '#101828', _dark: '#101828' },
-    'text.primary':   { default: '#E2E8F0', _dark: '#E2E8F0' },
-    'text.secondary': { default: '#7A93B8', _dark: '#7A93B8' },
-    'border.default': { default: '#1E2D45', _dark: '#1E2D45' },
+    // Mission black: near-neutral black and graphite surfaces, so the launch
+    // photography and the teal accent carry the color, not the chrome.
+    'bg.body':     { default: '#0A0B0D', _dark: '#0A0B0D' },
+    'bg.card':     { default: '#131518', _dark: '#131518' },
+    'bg.elevated': { default: '#1B1E22', _dark: '#1B1E22' },
+    'text.primary':   { default: '#EEEEEE', _dark: '#EEEEEE' },
+    // 8.1:1 on bg.body, 6.9:1 on bg.elevated
+    'text.secondary': { default: '#A2A6AD', _dark: '#A2A6AD' },
+    'border.default': { default: '#2A2E34', _dark: '#2A2E34' },
     // Interactive controls need a brighter edge than cards do. border.default
-    // is a hairline by design — correct for panels, but only 1.33:1 against
-    // the control fill, so inputs and selects read as flat dark shapes with no
+    // is a hairline by design, correct for panels, but too faint against the
+    // control fill, so inputs and selects read as flat dark shapes with no
     // edge at all. These clear the 3:1 WCAG asks for a UI component boundary
-    // (3.25:1 and 4.83:1 against bg.elevated) without making every card shout.
-    'border.control':      { default: '#52698C', _dark: '#52698C' },
-    'border.controlHover': { default: '#6B85AC', _dark: '#6B85AC' },
-    'brand.primary':  { default: 'brand.400' },
+    // (3.55:1 and 5.2:1 against bg.elevated) without making every card shout.
+    'border.control':      { default: '#6E747D', _dark: '#6E747D' },
+    'border.controlHover': { default: '#8A9099', _dark: '#8A9099' },
+    'brand.primary':  { default: 'brand.200' },
     // Logo accents, exposed as semantic tokens for use across the UI.
     // Flight-console rules: terminal green marks LIVE data (countdowns,
     // telemetry, status dots) and nothing else; teal is for interactive
@@ -62,6 +75,8 @@ const semanticTokens = {
     'accent.secondary': { default: 'accent.purple' },
     'accent.terminal':  { default: 'accent.terminal' },
     'accent.danger':    { default: 'accent.hal' },
+    // Amber marks what the visitor chose to follow (tracked launches, alerts)
+    'accent.tracked':   { default: 'accent.amber' },
   },
 };
 
@@ -86,8 +101,8 @@ const controlField = {
   // The stock outline focus ring is blue.300 — one of the framework blues the
   // brand ramp comment above rules out.
   _focusVisible: {
-    borderColor: 'brand.400',
-    boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)',
+    borderColor: 'brand.200',
+    boxShadow: '0 0 0 1px var(--chakra-colors-brand-200)',
   },
 };
 
@@ -101,10 +116,14 @@ const theme = extendTheme({
   colors,
   semanticTokens,
   fonts: {
-    // Orbitron is the brand display face (wordmark + headings); IBM Plex Sans
-    // stays for body copy, where Orbitron's wide geometric forms hurt readability.
-    heading: `'Orbitron', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
+    // IBM Plex Sans for headings and body: mission names run long ("Falcon 9
+    // Block 5 | USSF-481"), and Orbitron's wide geometric forms made them the
+    // loudest thing on every page. Orbitron is kept as `display`, reserved for
+    // the brand: the wordmark, the Home tagline, and short uppercase labels.
+    // Countdowns and technical lines use mono.
+    heading: `'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
     body:    `'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
+    display: `'Orbitron', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
   },
   styles: {
     global: {
@@ -152,6 +171,11 @@ const theme = extendTheme({
   components: {
     Button: {
       defaultProps: { colorScheme: 'brand' },
+    },
+    // Plex at heading sizes reads slightly loose; a touch of negative tracking
+    // tightens it without changing the face
+    Heading: {
+      baseStyle: { fontWeight: '600', letterSpacing: '-0.01em' },
     },
     Input: {
       variants: { outline: { field: controlField } },

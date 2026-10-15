@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Box, Flex, HStack, Heading, Text, VStack } from '@chakra-ui/react';
+import { withAlpha } from '../utils/color';
 
 export interface LaunchHeroProps {
   image?: string | null;
@@ -49,7 +50,7 @@ export default function LaunchHero({
       <Box
         position="absolute"
         inset={0}
-        bgGradient="linear(to-r, rgba(6,9,26,0.95) 25%, rgba(6,9,26,0.6) 55%, rgba(6,9,26,0.2))"
+        bgImage={`linear-gradient(to right, ${withAlpha('bg.body', 95)} 25%, ${withAlpha('bg.body', 60)} 55%, ${withAlpha('bg.body', 20)})`}
       />
       {bottomVignette && (
         <Box
@@ -58,7 +59,7 @@ export default function LaunchHero({
           left={0}
           right={0}
           h="80px"
-          bgGradient="linear(to-t, rgba(6,9,26,0.9), transparent)"
+          bgImage={`linear-gradient(to top, ${withAlpha('bg.body', 90)}, transparent)`}
         />
       )}
 
@@ -81,8 +82,9 @@ export default function LaunchHero({
             size={{ base: 'xl', md: '2xl' }}
             lineHeight="1.15"
             textAlign={{ base: 'center', lg: 'left' }}
+            sx={{ textWrap: 'balance' }}
           >
-            {heading}
+            {typeof heading === 'string' ? <LaunchName name={heading} /> : heading}
           </Heading>
 
           {metaLine}
@@ -102,5 +104,56 @@ export default function LaunchHero({
         </VStack>
       </Flex>
     </Box>
+  );
+}
+
+/**
+ * A launch name that wraps at its " | " separator. Launch Library names are
+ * "Rocket | Mission" ("Falcon 9 Block 5 | USSF-481"); left to the browser, a
+ * large heading breaks wherever the first line fills, splitting "Block 5" or
+ * a designator at its hyphen. Each half is an inline-block, so a line break
+ * falls between them first, and inside one only when it alone is too wide.
+ *
+ * `clamped` is for text under a line clamp (noOfLines): an inline-block is
+ * atomic, so the clamp can't cut inside it and adds lines instead. There only
+ * the rocket half is held together; the mission flows normally and truncates.
+ */
+export function LaunchName({ name, clamped = false }: { name: string; clamped?: boolean }) {
+  const parts = name.split(' | ');
+  if (parts.length < 2) return <NoHyphenBreaks text={name} />;
+  return (
+    <>
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 && ' '}
+          <Box as="span" display={clamped && i === parts.length - 1 ? 'inline' : 'inline-block'}>
+            <NoHyphenBreaks text={part} />
+            {i < parts.length - 1 && ' |'}
+          </Box>
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Keeps hyphenated words ("USSF-481", "15-15", "Mid-Inclination") whole, so a
+ * line only breaks at a space. A non-breaking hyphen (U+2011) would be
+ * simpler, but Plex has no glyph for it and the fallback font's sits low.
+ * Plain nowrap spans stay inline, so a surrounding line clamp still works.
+ */
+function NoHyphenBreaks({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\S*\w-\w\S*)/).map((piece, i) =>
+        i % 2 ? (
+          <Box as="span" key={i} whiteSpace="nowrap">
+            {piece}
+          </Box>
+        ) : (
+          piece
+        )
+      )}
+    </>
   );
 }

@@ -120,7 +120,7 @@ export default function LaunchMapPage() {
 
         {loading ? (
           <VStack py={16} spacing={6}>
-            <Spinner size="xl" color="blue.400" thickness="4px" />
+            <Spinner size="xl" color="brand.primary" thickness="4px" />
             <Text color="text.secondary">Loading launch sites...</Text>
           </VStack>
         ) : error ? (

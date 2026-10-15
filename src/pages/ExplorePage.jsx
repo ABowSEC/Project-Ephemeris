@@ -80,7 +80,7 @@ function SearchResults({ activeQuery }) {
   if (loading) {
     return (
       <Flex justify="center" py={16}>
-        <Spinner size="xl" color="teal.400" thickness="4px" />
+        <Spinner size="xl" color="brand.primary" thickness="4px" />
       </Flex>
     );
   }
@@ -143,7 +143,7 @@ function SearchResults({ activeQuery }) {
           size="sm"
           onClick={() => goToPage(page - 1)}
           isDisabled={page <= 1}
-          colorScheme="teal"
+          colorScheme="brand"
           variant="outline"
         >
           Prev
@@ -155,7 +155,7 @@ function SearchResults({ activeQuery }) {
           size="sm"
           onClick={() => goToPage(page + 1)}
           isDisabled={page >= totalPages}
-          colorScheme="teal"
+          colorScheme="brand"
           variant="outline"
         >
           Next
@@ -178,7 +178,7 @@ function SearchResults({ activeQuery }) {
               mb={4}
             />
             {metaFor(selected)?.date_created && (
-              <Badge colorScheme="teal" mb={2}>
+              <Badge colorScheme="brand" mb={2}>
                 {new Date(metaFor(selected).date_created).toLocaleDateString()}
               </Badge>
             )}
@@ -213,7 +213,7 @@ export default function ExplorePage() {
     <Container maxW="7xl" py={10}>
       <VStack spacing={8} align="stretch">
         <Box textAlign="center">
-          <Heading size="2xl" bgGradient="linear(to-r, green.400, teal.500)" bgClip="text">
+          <Heading size="2xl" color="text.primary">
             Explore the Cosmos
           </Heading>
           <Text fontSize="lg" color="text.secondary" mt={2}>
@@ -236,7 +236,7 @@ export default function ExplorePage() {
                 aria-label="Search"
                 icon={<SearchIcon />}
                 size="sm"
-                colorScheme="teal"
+                colorScheme="brand"
                 variant="ghost"
                 onClick={handleSearch}
               />

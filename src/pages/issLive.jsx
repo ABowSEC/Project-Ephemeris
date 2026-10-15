@@ -186,8 +186,7 @@ export default function ISSLivePage() {
         <Box textAlign="center">
           <Heading
             size="2xl"
-            bgGradient="linear(to-r, cyan.400, blue.500)"
-            bgClip="text"
+            color="text.primary"
             mb={3}
           >
             International Space Station
@@ -232,7 +231,7 @@ export default function ISSLivePage() {
 
           {loading && !issData ? (
             <HStack justify="center" py={6}>
-              <Spinner size="xl" color="blue.400" thickness="4px" />
+              <Spinner size="xl" color="brand.primary" thickness="4px" />
               <Text color="text.secondary">Acquiring ISS position…</Text>
             </HStack>
           ) : (
@@ -240,14 +239,14 @@ export default function ISSLivePage() {
               <GridItem>
                 <Stat>
                   <StatLabel color="text.secondary">Latitude</StatLabel>
-                  <StatNumber color="cyan.400">{issData?.latitude?.toFixed(4) ?? "—"}°</StatNumber>
+                  <StatNumber color="accent.terminal">{issData?.latitude?.toFixed(4) ?? "—"}°</StatNumber>
                   <StatHelpText>{issData?.latitude >= 0 ? "North" : "South"}</StatHelpText>
                 </Stat>
               </GridItem>
               <GridItem>
                 <Stat>
                   <StatLabel color="text.secondary">Longitude</StatLabel>
-                  <StatNumber color="cyan.400">{issData?.longitude?.toFixed(4) ?? "—"}°</StatNumber>
+                  <StatNumber color="accent.terminal">{issData?.longitude?.toFixed(4) ?? "—"}°</StatNumber>
                   <StatHelpText>{issData?.longitude >= 0 ? "East" : "West"}</StatHelpText>
                 </Stat>
               </GridItem>
@@ -280,7 +279,7 @@ export default function ISSLivePage() {
             />
           ) : (
             <Card h="420px" display="flex" alignItems="center" justifyContent="center">
-              <Spinner size="xl" color="blue.400" thickness="4px" />
+              <Spinner size="xl" color="brand.primary" thickness="4px" />
             </Card>
           )}
           <Text fontSize="xs" color="text.secondary" mt={2} textAlign="right">

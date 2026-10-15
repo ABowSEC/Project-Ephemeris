@@ -3,6 +3,7 @@ import { Box, Button, Container, HStack, Image, Link, SimpleGrid, Text, VStack }
 import { FaGithub, FaRegStar } from "react-icons/fa";
 import { SiKofi } from "react-icons/si";
 import { DISCOVER_NAV, PRIMARY_NAV } from "../data/navigation";
+import { withAlpha } from "../utils/color";
 
 const CREDITS = [
   { label: "The Space Devs", href: "https://thespacedevs.com" },
@@ -30,7 +31,7 @@ export default function Footer() {
       mt={16}
       borderTop="1px solid"
       borderColor="border.default"
-      bg="rgba(6, 9, 26, 0.80)"
+      bg={withAlpha("bg.body", 80)}
     >
       <Container maxW="7xl" py={10}>
         <SimpleGrid
@@ -88,7 +89,7 @@ export default function Footer() {
                 as={RouterLink}
                 to="/launches"
                 size="sm"
-                colorScheme="orange"
+                colorScheme="amber"
                 variant="outline"
                 leftIcon={<FaRegStar />}
               >

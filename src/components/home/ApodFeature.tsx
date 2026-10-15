@@ -377,6 +377,7 @@ export default function ApodFeature() {
       {/* Section header: says what this feature is before the photo title */}
       <Box mb={5}>
         <Text
+          fontFamily="display"
           fontSize="10px"
           color="brand.400"
           fontWeight="bold"
