@@ -20,6 +20,32 @@ const APOD_URL =
   'https://science.nasa.gov/wp-json/wp/v2/apod-basic/?per_page=1' +
   '&_fields=date,title,permalink,media_type,explanation,copyright,alt,hdurl,basic_html';
 
+// The longest edge we ask for. hdurl is the full original (6750x9000 and
+// several MB is not unusual), far more than a card or even the fullscreen
+// viewer can show; hdurl itself is kept for "Open original".
+const DISPLAY_EDGE = 1600;
+
+// hdurl points at NASA's dynamicimage resizer, whose w/h params are a
+// bounding box (fit=clip keeps the aspect ratio). Shrink the box to the
+// display size; leave anything else, or anything already smaller, alone.
+function displaySized(url) {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'assets.science.nasa.gov' || !u.pathname.startsWith('/dynamicimage/')) return url;
+    const w = Number(u.searchParams.get('w')) || Infinity;
+    const h = Number(u.searchParams.get('h')) || Infinity;
+    const scale = Math.min(1, DISPLAY_EDGE / Math.max(w, h));
+    if (scale === 1 && Number.isFinite(w)) return url;
+    u.searchParams.set('w', String(Number.isFinite(w) ? Math.round(w * scale) : DISPLAY_EDGE));
+    u.searchParams.set('h', String(Number.isFinite(h) ? Math.round(h * scale) : DISPLAY_EDGE));
+    u.searchParams.set('fit', 'clip');
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 // DOMParser builds an inert document: scripts don't run and nothing loads.
 function parseHtml(html) {
   return new DOMParser().parseFromString(html || '', 'text/html');
@@ -57,9 +83,9 @@ export function normalizeApod(entry) {
     copyright: cleanCredit(entry.copyright),
     alt: entry.alt || '',
     media_type: isVideo ? 'video' : 'image',
-    url: isVideo ? videoSrc : entry.hdurl,
+    url: isVideo ? videoSrc : displaySized(entry.hdurl),
     hdurl: entry.hdurl,
-    thumbnail_url: isVideo ? entry.hdurl : undefined,
+    thumbnail_url: isVideo ? displaySized(entry.hdurl) : undefined,
     permalink: entry.permalink,
   };
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   AspectRatio,
   Badge,
@@ -24,6 +24,7 @@ import {
   usePrefersReducedMotion,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
+import { useInView } from "framer-motion";
 import { ArrowForwardIcon, CalendarIcon, DownloadIcon, ExternalLinkIcon } from "@chakra-ui/icons";
 import { fetchLatestApod } from "../../services/apod";
 import { useApi } from "../../hooks/useApi";
@@ -131,7 +132,11 @@ export default function ApodFeature() {
   // Track image readiness with a detached probe (Chakra's useImage) instead
   // of onLoad on the rendered img: the load event on a display:none element
   // proved unreliable on the first data commit, leaving the skeleton stuck.
-  const imgStatus = useImage({ src: !isVideoApod ? apod?.url : undefined });
+  // The section sits below the launch content on Home, so hold the media
+  // (image, autoplaying video, or embed) until it's about to scroll in
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const nearView = useInView(sectionRef, { once: true, margin: "400px 0px" });
+  const imgStatus = useImage({ src: nearView && !isVideoApod ? apod?.url : undefined });
   const imgLoaded = imgStatus === "loaded";
   const imgError = imgStatus === "failed";
 
@@ -188,7 +193,9 @@ export default function ApodFeature() {
           minH={{ base: "260px", md: "340px", lg: "380px" }}
           bg="black"
         >
-          {isVideo ? (
+          {!nearView ? (
+            <Skeleton position="absolute" inset={0} rounded="none" />
+          ) : isVideo ? (
             isVideoFile(apod.url) ? (
               <Box
                 as="video"
@@ -366,7 +373,7 @@ export default function ApodFeature() {
   };
 
   return (
-    <Box as="section" aria-labelledby="apod-heading">
+    <Box as="section" aria-labelledby="apod-heading" ref={sectionRef}>
       {/* Section header: says what this feature is before the photo title */}
       <Box mb={5}>
         <Text
