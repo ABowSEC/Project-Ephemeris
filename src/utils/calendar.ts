@@ -1,6 +1,7 @@
 // Calendar export helpers: build a Google Calendar prefill URL or download
 // an .ics file so a launch shows up in the user's own calendar app.
 
+import { launchTime, officialWebcast } from './launchFields';
 import type { AnyLaunch } from '../types/launchLibrary';
 
 // 2026-07-15T12:34:56Z -> 20260715T123456Z (UTC basic format both formats use)
@@ -10,10 +11,12 @@ function toCalendarUtc(dateString: string): string {
 }
 
 function launchTimes(launch: AnyLaunch): { start: string; end: string } {
-  const start = launch.window_start ?? launch.net;
+  // launchTime prefers net, the target T-0, so the event lines up with the
+  // countdown and alerts rather than the opening of a multi-hour window
+  const start = launchTime(launch) ?? new Date().toISOString();
   // Fall back to a one-hour block when the API gives no window end
   const end =
-    launch.window_end && launch.window_end !== start
+    launch.window_end && Date.parse(launch.window_end) > Date.parse(start)
       ? launch.window_end
       : new Date(new Date(start).getTime() + 60 * 60 * 1000).toISOString();
   return { start, end };
@@ -24,7 +27,7 @@ function launchDetails(launch: AnyLaunch): string {
     launch.launch_service_provider?.name,
     launch.rocket?.configuration?.name && `Rocket: ${launch.rocket.configuration.name}`,
     launch.mission?.description,
-    'vid_urls' in launch && launch.vid_urls?.[0]?.url && `Watch: ${launch.vid_urls[0].url}`,
+    officialWebcast(launch)?.url && `Watch: ${officialWebcast(launch)?.url}`,
     'Tracked via Ephemeris',
   ];
   return lines.filter(Boolean).join('\n');
