@@ -6,7 +6,7 @@
   "type": "module",
   "packageManager": "npm@11.18.0",
   "engines": {
-    "node": ">=22",
+    "node": ">=22.18",
     "npm": ">=11"
   },
   "scripts": {
