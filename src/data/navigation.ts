@@ -4,7 +4,10 @@
 export interface NavItem {
   path: string;
   label: string;
+  /** One line describing the section, for the Discover menu and Home. */
   blurb?: string;
+  /** Listed in Home's "More to explore" index. */
+  onHome?: boolean;
 }
 
 /**
@@ -14,13 +17,13 @@ export interface NavItem {
 export const PRIMARY_NAV: NavItem[] = [
   { path: '/launches', label: 'Launches' },
   { path: '/map', label: 'Launch Map' },
-  { path: '/iss', label: 'ISS Live' },
+  { path: '/iss', label: 'ISS Live', blurb: 'Real-time station tracking and onboard video', onHome: true },
 ];
 
 /** Secondary sections, grouped under "Discover" in the top nav. */
 export const DISCOVER_NAV: NavItem[] = [
-  { path: '/mars', label: 'Mars Rovers', blurb: "Imagery from the red planet's rovers" },
-  { path: '/explore', label: 'Explore', blurb: "NASA's image library and space history" },
+  { path: '/mars', label: 'Mars Rovers', blurb: "Imagery from the red planet's rovers", onHome: true },
+  { path: '/explore', label: 'Explore', blurb: "NASA's image library and space history", onHome: true },
 ];
 
 /**

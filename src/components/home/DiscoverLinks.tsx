@@ -1,26 +1,12 @@
 import { Link as RouterLink } from "react-router-dom";
 import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 import { ArrowForwardIcon } from "@chakra-ui/icons";
+import { DISCOVER_NAV, PRIMARY_NAV } from "../../data/navigation";
 
 // The rest of the site, below the launch content. Flight-console index:
-// numbered hairline rows sharing one accent, not an icon-card grid
-const LINKS = [
-  {
-    to: "/iss",
-    title: "ISS Live",
-    blurb: "Real-time station tracking and onboard video",
-  },
-  {
-    to: "/mars",
-    title: "Mars Rovers",
-    blurb: "Imagery from the red planet's rovers",
-  },
-  {
-    to: "/explore",
-    title: "Explore",
-    blurb: "Search NASA's image library and space history",
-  },
-];
+// numbered hairline rows sharing one accent, not an icon-card grid. Drawn
+// from the shared nav list so labels and blurbs match the menus.
+const LINKS = [...PRIMARY_NAV, ...DISCOVER_NAV].filter((item) => item.onHome);
 
 export default function DiscoverLinks() {
   return (
@@ -29,7 +15,7 @@ export default function DiscoverLinks() {
         More to explore
       </Heading>
       <Box borderTop="1px solid" borderColor="border.default">
-        {LINKS.map(({ to, title, blurb }, i) => (
+        {LINKS.map(({ path: to, label: title, blurb }, i) => (
           <Flex
             key={to}
             as={RouterLink}
