@@ -6,7 +6,7 @@
   "type": "module",
   "packageManager": "npm@11.18.0",
   "engines": {
-    "node": ">=22",
+    "node": ">=22.18",
     "npm": ">=11"
   },
   "scripts": {
@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p functions",
     "preview": "vite preview",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "og-image": "node scripts/make-og-image.ts"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.0.17",

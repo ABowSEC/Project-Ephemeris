@@ -44,6 +44,8 @@ import MissionTerminal from './components/MissionTerminal';
 import StarField from './components/StarField';
 import WarpTransition from './components/WarpTransition';
 import NavLaunchCountdown from './components/NavLaunchCountdown';
+import NavDiscoverMenu from './components/NavDiscoverMenu';
+import { DISCOVER_NAV, PRIMARY_NAV, isActiveNav, type NavItem } from './data/navigation';
 import Footer from './components/Footer';
 import { useKonamiCode } from './hooks/useKonamiCode';
 import { useLaunchAlerts } from './hooks/useLaunchAlerts';
@@ -62,29 +64,39 @@ const pageTransition = {
   exit:  { duration: 0.15, ease: 'easeIn'  },
 };
 
-const navigationItems = [
-  { path: '/',         label: 'Home' },
-  // /map is deliberately absent: it is reached from the Launches page rather
-  // than the top bar, since the map is a view of launch data, not a peer
-  // section. The route, its metadata, and its sitemap entry all still stand.
-  { path: '/launches', label: 'Launches' },
-  { path: '/mars',     label: 'Mars' },
-  { path: '/explore',  label: 'Explore' },
-  { path: '/iss',      label: 'ISS' },
-];
+// The nav countdown pill repeats the hero countdown on these pages, so it
+// only shows elsewhere.
+const ROUTES_WITH_HERO_COUNTDOWN = ['/', '/launches'];
 
-// Exact match everywhere except for sections with child routes: a launch
-// detail page at /launches/<slug> should still light up the Launches tab.
-// '/' is exact-only or it would match every route.
-const isActiveNav = (pathname, path) =>
-  pathname === path || (path !== '/' && pathname.startsWith(`${path}/`));
-
-// /solarsim is intentionally unlisted // reachable via the Konami code
-// (see KonamiWarp below) or a direct link, as a hidden easter egg.
+function DrawerNavLink({ item, isActive, onClick }: { item: NavItem; isActive: boolean; onClick: () => void }) {
+  return (
+    <Link
+      as={RouterLink}
+      to={item.path}
+      onClick={onClick}
+      px={4}
+      py={3}
+      borderRadius="lg"
+      fontSize="md"
+      fontWeight={isActive ? '600' : '400'}
+      color={isActive ? 'white' : 'text.secondary'}
+      bg={isActive ? 'whiteAlpha.100' : 'transparent'}
+      _hover={{
+        textDecoration: 'none',
+        color: 'white',
+        bg: 'whiteAlpha.50',
+      }}
+    >
+      {item.label}
+    </Link>
+  );
+}
 
 function Navigation() {
   const location = useLocation();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const discoverActive = DISCOVER_NAV.some(({ path }) => isActiveNav(location.pathname, path));
+  const showNavCountdown = !ROUTES_WITH_HERO_COUNTDOWN.includes(location.pathname);
 
   return (
     <Box
@@ -130,7 +142,7 @@ function Navigation() {
 
           {/* Inline links: desktop only; small screens use the drawer */}
           <HStack spacing={1} display={{ base: 'none', md: 'flex' }}>
-            {navigationItems.map(({ path, label }) => {
+            {PRIMARY_NAV.map(({ path, label }) => {
               const isActive = isActiveNav(location.pathname, path);
               return (
                 <Link
@@ -154,10 +166,11 @@ function Navigation() {
                 </Link>
               );
             })}
+            <NavDiscoverMenu isActive={discoverActive} />
           </HStack>
 
           <Spacer />
-          <NavLaunchCountdown />
+          {showNavCountdown && <NavLaunchCountdown />}
           <MissionTerminal />
 
           <IconButton
@@ -198,31 +211,34 @@ function Navigation() {
           </DrawerHeader>
           <DrawerBody>
             <VStack align="stretch" spacing={1}>
-              {navigationItems.map(({ path, label }) => {
-                const isActive = isActiveNav(location.pathname, path);
-                return (
-                  <Link
-                    key={path}
-                    as={RouterLink}
-                    to={path}
-                    onClick={onClose}
-                    px={4}
-                    py={3}
-                    borderRadius="lg"
-                    fontSize="md"
-                    fontWeight={isActive ? '600' : '400'}
-                    color={isActive ? 'white' : 'text.secondary'}
-                    bg={isActive ? 'whiteAlpha.100' : 'transparent'}
-                    _hover={{
-                      textDecoration: 'none',
-                      color: 'white',
-                      bg: 'whiteAlpha.50',
-                    }}
-                  >
-                    {label}
-                  </Link>
-                );
-              })}
+              {PRIMARY_NAV.map((item) => (
+                <DrawerNavLink
+                  key={item.path}
+                  item={item}
+                  isActive={isActiveNav(location.pathname, item.path)}
+                  onClick={onClose}
+                />
+              ))}
+              <Text
+                px={4}
+                pt={5}
+                pb={1}
+                fontSize="10px"
+                fontWeight="bold"
+                letterSpacing="0.2em"
+                textTransform="uppercase"
+                color="text.secondary"
+              >
+                Discover
+              </Text>
+              {DISCOVER_NAV.map((item) => (
+                <DrawerNavLink
+                  key={item.path}
+                  item={item}
+                  isActive={isActiveNav(location.pathname, item.path)}
+                  onClick={onClose}
+                />
+              ))}
             </VStack>
           </DrawerBody>
         </DrawerContent>

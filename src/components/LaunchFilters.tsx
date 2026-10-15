@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   Button,
   HStack,
@@ -30,8 +30,14 @@ const STATUS_OPTIONS = [
   ...FILTERABLE_STATUSES.map(({ abbrev, label }) => ({ value: abbrev, label })),
 ];
 
+interface LaunchFiltersProps {
+  state: LaunchFilterState;
+  /** Rendered beside the Tracked toggle (the alerts bell), so tracking controls stay together. */
+  trackingControls?: ReactNode;
+}
+
 /** The controls themselves. State comes from useLaunchFilters. */
-export default function LaunchFilters({ state }: { state: LaunchFilterState }) {
+export default function LaunchFilters({ state, trackingControls }: LaunchFiltersProps) {
   const { values, setFilter, reset, providers, trackedCount, activeCount, filtered, total } = state;
 
   // providers is rebuilt whenever the feed changes; this keeps the option
@@ -91,15 +97,18 @@ export default function LaunchFilters({ state }: { state: LaunchFilterState }) {
         </WrapItem>
 
         <WrapItem>
-          <Button
-            size="sm"
-            variant={values.tracked === '1' ? 'solid' : 'outline'}
-            colorScheme="orange"
-            leftIcon={<Icon as={FaStar} boxSize={3} />}
-            onClick={() => setFilter('tracked', values.tracked === '1' ? '' : '1')}
-          >
-            Tracked{trackedCount > 0 ? ` (${trackedCount})` : ''}
-          </Button>
+          <HStack spacing={2}>
+            <Button
+              size="sm"
+              variant={values.tracked === '1' ? 'solid' : 'outline'}
+              colorScheme="orange"
+              leftIcon={<Icon as={FaStar} boxSize={3} />}
+              onClick={() => setFilter('tracked', values.tracked === '1' ? '' : '1')}
+            >
+              Tracked{trackedCount > 0 ? ` (${trackedCount})` : ''}
+            </Button>
+            {trackingControls}
+          </HStack>
         </WrapItem>
 
         {activeCount > 0 && (

@@ -1,7 +1,9 @@
 import { useCallback, useEffect } from 'react';
-import { useApi } from './useApi';
+import { useApi, type RefetchOptions } from './useApi';
+// launchStore is JS; its payload is cast to the typed response shape here
 import { getUpcomingLaunches, getUpcomingLaunchesFetchedAt, FRESH_MS } from '../services/launchStore';
 import { hasFlown } from '../data/launchStatus';
+import type { LaunchListItem, UpcomingLaunchesResponse } from '../types/launchLibrary';
 
 // Well beyond the normal refresh cadence (5-15 min, see FRESH_MS), so a
 // routine refetch delay never trips this — only a sustained run of failures
@@ -9,18 +11,29 @@ import { hasFlown } from '../data/launchStatus';
 // Past this age, showing the data as if it's current would be misleading.
 const STALE_WARNING_MS = 45 * 60 * 1000;
 
+export interface UpcomingLaunchesResult {
+  launches: LaunchListItem[];
+  nextLaunch: LaunchListItem | null;
+  loading: boolean;
+  error: string | null;
+  refetch: (options?: RefetchOptions) => Promise<void>;
+  refresh: () => Promise<void>;
+  stale: boolean;
+  fetchedAt: number | null;
+}
+
 /**
  * React hook over the shared launch store: returns the upcoming launches
  * and quietly re-checks on an interval aligned with the store's TTL, so
  * however many components mount this, the app still makes at most one
  * network request per freshness window.
- *
- * @returns {{ launches: Array, nextLaunch: Object|null, loading: boolean, error: string|null, refetch: Function, refresh: Function, stale: boolean, fetchedAt: number|null }}
  */
-export function useUpcomingLaunches() {
+export function useUpcomingLaunches(): UpcomingLaunchesResult {
   // The store manages its own request lifecycle, so the abort signal from
   // useApi is unused; useApi still guards against state updates after unmount.
-  const { data, loading, error, refetch } = useApi((signal, { force } = {}) => getUpcomingLaunches({ force }));
+  const { data, loading, error, refetch } = useApi<UpcomingLaunchesResponse>(
+    (_signal, { force } = {}) => getUpcomingLaunches({ force: Boolean(force) })
+  );
 
   const launches = data?.results ?? [];
 
@@ -42,7 +55,7 @@ export function useUpcomingLaunches() {
   // this hook already re-render on a steady cadence (ticking countdowns), so
   // this stays accurate without its own timer, and it's just a localStorage
   // read — cheap enough to not bother memoizing.
-  const fetchedAt = getUpcomingLaunchesFetchedAt();
+  const fetchedAt: number | null = getUpcomingLaunchesFetchedAt();
   const stale = fetchedAt != null && Date.now() - fetchedAt > STALE_WARNING_MS;
 
   // For the manual "refresh" action on the stale-data notice: bypasses the

@@ -2,8 +2,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { Box, HStack, Text } from '@chakra-ui/react';
 import { keyframes } from '@emotion/react';
 import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches';
-import { useCountdown } from '../hooks/useCountdown';
-import { launchTime } from '../utils/launchFields';
+import { useLaunchCountdown, type TimeLeft } from '../hooks/useCountdown';
 
 // Radar ping: the dot stays lit and emits a soft expanding ring, reading
 // as a live signal rather than a blinking light
@@ -15,8 +14,8 @@ const ping = keyframes`
 
 // Console-style T-minus readout. Seconds only show inside 24h, where the
 // live tick earns its place; further out, minutes are enough.
-function formatCountdown({ d, h, m, s }) {
-  const pad = (n) => String(n).padStart(2, '0');
+function formatCountdown({ d, h, m, s }: TimeLeft): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
   if (d > 0) return `T-${d}d ${pad(h)}:${pad(m)}`;
   return `T-${pad(h)}:${pad(m)}:${pad(s)}`;
 }
@@ -25,7 +24,7 @@ export default function NavLaunchCountdown() {
   // Errors are deliberately not rendered: the readout is decorative, so on
   // failure we keep showing the last good launch or hide entirely.
   const { nextLaunch, loading, stale } = useUpcomingLaunches();
-  const timeLeft = useCountdown(launchTime(nextLaunch));
+  const timeLeft = useLaunchCountdown(nextLaunch);
 
   const name = nextLaunch?.name ?? null;
 

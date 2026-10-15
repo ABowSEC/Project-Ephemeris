@@ -1,7 +1,23 @@
 import { useEffect } from 'react';
 import { SITE_NAME, SITE_URL, routeMeta } from '../seo/routeMeta';
 
-function setContent(selector, content) {
+/** The site-wide 1200×630 share card (public/og-image.png), used by every route without its own image. */
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
+
+interface RouteMetaEntry {
+  title: string;
+  description: string;
+  full?: boolean;
+}
+
+export interface PageMetaOverride {
+  title: string;
+  description: string;
+  image?: string;
+  url?: string;
+}
+
+function setContent(selector: string, content: string) {
   document.querySelector(selector)?.setAttribute('content', content);
 }
 
@@ -19,25 +35,25 @@ function setContent(selector, content) {
  * and this keeps client-side navigation consistent with it. Pass null while
  * the data is still loading; the previous page's tags stay until it arrives,
  * which is better than blanking them.
- *
- * @param {string} path
- * @param {{ title: string, description: string, image?: string, url?: string } | null} [override]
  */
-export function usePageMeta(path, override = null) {
+export function usePageMeta(path: string, override: PageMetaOverride | null = null) {
   // Depending on the object identity would re-run this on every render, since
   // callers build the override inline. The values are what matter.
-  const { title: overrideTitle, description: overrideDescription, image, url: overrideUrl } =
-    override ?? {};
+  const overrideTitle = override?.title;
+  const overrideDescription = override?.description;
+  const image = override?.image;
+  const overrideUrl = override?.url;
 
   useEffect(() => {
-    const meta = routeMeta[path];
+    // routeMeta.js stays plain JS (Node scripts import it directly)
+    const meta = (routeMeta as Record<string, RouteMetaEntry | undefined>)[path];
     if (!meta && !overrideTitle) return;
 
     const title = overrideTitle
       ? `${overrideTitle} · ${SITE_NAME}`
-      : meta.full
+      : meta?.full
         ? meta.title
-        : `${meta.title} · ${SITE_NAME}`;
+        : `${meta?.title} · ${SITE_NAME}`;
     const description = overrideDescription ?? meta?.description ?? '';
     const url = SITE_URL + (overrideUrl ?? (path === '/' ? '/' : path));
 
@@ -49,12 +65,12 @@ export function usePageMeta(path, override = null) {
     setContent('meta[name="twitter:title"]', title);
     setContent('meta[name="twitter:description"]', description);
 
-    if (image) {
-      setContent('meta[property="og:image"]', image);
-      setContent('meta[name="twitter:image"]', image);
-    }
+    // Always set, so a launch page's mission image doesn't linger on the
+    // next page the visitor navigates to
+    setContent('meta[property="og:image"]', image ?? DEFAULT_OG_IMAGE);
+    setContent('meta[name="twitter:image"]', image ?? DEFAULT_OG_IMAGE);
 
-    let canonical = document.querySelector('link[rel="canonical"]');
+    let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!canonical) {
       canonical = document.createElement('link');
       canonical.rel = 'canonical';

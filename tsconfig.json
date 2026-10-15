@@ -1,9 +1,9 @@
 {
-  // Incremental TypeScript adoption. The existing .jsx files stay exactly as
-  // they are: allowJs lets them keep resolving, checkJs: false means tsc never
-  // reports on them. New code is written in .ts/.tsx and is fully strict, so
-  // the type boundary sits at the new modules rather than sprawling into a
-  // half-migrated codebase.
+  // Incremental TypeScript adoption. Remaining .js/.jsx files keep resolving
+  // through allowJs, and checkJs: false means tsc never reports on them. A
+  // file is converted whole, to .ts/.tsx under full strict, when it is next
+  // substantially changed, so the type boundary moves file by file rather
+  // than sprawling into half-typed modules.
   //
   // functions/ is excluded here — Pages Functions run on the Workers runtime,
   // not the DOM, and have their own tsconfig with @cloudflare/workers-types.
@@ -13,7 +13,7 @@
     "moduleResolution": "Bundler",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client"],
+    "types": ["vite/client", "vite-plugin-pwa/client"],
 
     "strict": true,
     "noUnusedLocals": true,

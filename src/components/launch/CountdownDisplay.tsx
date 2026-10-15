@@ -1,6 +1,6 @@
 import { Box, HStack, Text, VStack } from '@chakra-ui/react';
-import { useCountdown } from '../../hooks/useCountdown';
-import { formatNet, hasPreciseTime, launchTime } from '../../utils/launchFields';
+import { useLaunchCountdown } from '../../hooks/useCountdown';
+import { formatNet, hasPreciseTime } from '../../utils/launchFields';
 import { hasFlown } from '../../data/launchStatus';
 import StatusBadge from '../StatusBadge';
 import type { AnyLaunch } from '../../types/launchLibrary';
@@ -22,8 +22,7 @@ export default function CountdownDisplay({
   launch: AnyLaunch;
   size?: 'sm' | 'lg';
 }) {
-  const target = launchTime(launch);
-  const countdown = useCountdown(hasPreciseTime(launch) ? target : null);
+  const countdown = useLaunchCountdown(launch);
   const flown = hasFlown(launch.status);
 
   if (flown) {

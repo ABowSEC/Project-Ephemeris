@@ -5,7 +5,6 @@ import {
   VStack,
   Text,
   Container,
-  HStack,
   Icon,
   Flex,
   Link,
@@ -14,13 +13,11 @@ import {
 } from "@chakra-ui/react";
 import { FaRocket, FaMapMarkerAlt } from "react-icons/fa";
 import LaunchFeed from "../components/LaunchFeed";
-import AlertSettings from "../components/AlertSettings";
 import CountdownDisplay from "../components/launch/CountdownDisplay";
 import StaleDataNotice from "../components/StaleDataNotice";
 import StatusBadge from "../components/StatusBadge";
 import LaunchMetaLine from "../components/LaunchMetaLine";
 import LaunchHero from "../components/LaunchHero";
-import Card from "../components/Card";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { formatNet, launchPath, providerName, rocketName } from "../utils/launchFields";
@@ -127,34 +124,22 @@ export default function LaunchPage() {
                   Every launch. Every countdown. Live.
                 </Text>
               </Box>
-              {/* The map is no longer a top-level nav tab; this is how it is
-                  reached, next to the feed it visualizes. */}
-              <HStack spacing={3}>
-                <Button
-                  as={RouterLink}
-                  to="/map"
-                  size="sm"
-                  variant="outline"
-                  colorScheme="teal"
-                  leftIcon={<Icon as={FaMapMarkerAlt} boxSize={3} />}
-                >
-                  World launch map
-                </Button>
-                <AlertSettings />
-              </HStack>
+              {/* The same data as a globe; also in the top nav */}
+              <Button
+                as={RouterLink}
+                to="/map"
+                size="sm"
+                variant="outline"
+                colorScheme="teal"
+                leftIcon={<Icon as={FaMapMarkerAlt} boxSize={3} />}
+              >
+                World launch map
+              </Button>
             </Flex>
 
             <LaunchFeed />
           </VStack>
         </Box>
-
-        {/* Footer note */}
-        <Card p={4} borderRadius="md" textAlign="center">
-          <Text fontSize="sm" color="text.secondary">
-            Launch times are subject to change due to weather, technical issues, or range conflicts ·
-            All times in your local timezone · Updated automatically
-          </Text>
-        </Card>
       </VStack>
     </Container>
   );
