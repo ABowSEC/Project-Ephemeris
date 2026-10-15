@@ -12,9 +12,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const W = 1200;
 const H = 630;
 
-// Matches bg.body (#06091A) and the brand teal / terminal green in theme.js
-const BG = '#06091A';
-const TEAL = '#43c0b8';
+// Matches bg.body (#0A0B0D) and the brand teal / terminal green in theme.js
+const BG = '#0A0B0D';
+const TEAL = '#2DD4BF';
 const TERMINAL = '#00ff9d';
 
 // Deterministic starfield, so re-running the script doesn't churn the PNG
@@ -34,7 +34,7 @@ const background = `
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
   <defs>
     <radialGradient id="glow" cx="78%" cy="50%" r="55%">
-      <stop offset="0" stop-color="#1b2a5a" stop-opacity="0.9"/>
+      <stop offset="0" stop-color="#1E2227" stop-opacity="0.9"/>
       <stop offset="1" stop-color="${BG}" stop-opacity="0"/>
     </radialGradient>
   </defs>
@@ -48,7 +48,7 @@ const text = `
   <style>
     .eyebrow { font: 700 22px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; letter-spacing: 6px; fill: ${TEAL}; }
     .title   { font: 700 68px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #ffffff; }
-    .sub     { font: 400 30px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #a9b4cc; }
+    .sub     { font: 400 30px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; fill: #A2A6AD; }
     .url     { font: 600 24px 'Consolas', 'Menlo', monospace; fill: ${TERMINAL}; }
   </style>
   <text x="80" y="200" class="eyebrow">EPHEMERIS · LAUNCH TRACKER</text>

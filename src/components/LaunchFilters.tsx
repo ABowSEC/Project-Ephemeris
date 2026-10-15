@@ -101,7 +101,7 @@ export default function LaunchFilters({ state, trackingControls }: LaunchFilters
             <Button
               size="sm"
               variant={values.tracked === '1' ? 'solid' : 'outline'}
-              colorScheme="orange"
+              colorScheme="amber"
               leftIcon={<Icon as={FaStar} boxSize={3} />}
               onClick={() => setFilter('tracked', values.tracked === '1' ? '' : '1')}
             >

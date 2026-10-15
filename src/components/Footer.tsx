@@ -89,7 +89,7 @@ export default function Footer() {
                 as={RouterLink}
                 to="/launches"
                 size="sm"
-                colorScheme="orange"
+                colorScheme="amber"
                 variant="outline"
                 leftIcon={<FaRegStar />}
               >

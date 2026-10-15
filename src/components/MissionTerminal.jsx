@@ -88,9 +88,26 @@ export default function MissionTerminal() {
 
   return (
     <>
+      {/* HAL's eye stays dim and grey until hovered or focused: a glowing red
+          dot in the nav reads as an alarm, and red is reserved for real
+          problems (scrubs, holds, errors). It lights up as you reach for it. */}
       <IconButton
         ref={btnRef}
-        icon={<Box as="img" src="/hal9000.png" alt="Mission Terminal" borderRadius="full" boxSize="28px" />}
+        data-group
+        icon={
+          <Box
+            as="img"
+            src="/hal9000.png"
+            alt=""
+            borderRadius="full"
+            boxSize="28px"
+            filter="grayscale(1) brightness(0.75)"
+            opacity={0.7}
+            transition="filter 0.25s ease, opacity 0.25s ease"
+            _groupHover={{ filter: 'none', opacity: 1 }}
+            _groupFocusVisible={{ filter: 'none', opacity: 1 }}
+          />
+        }
         variant="ghost"
         colorScheme="green"
         onClick={onOpen}

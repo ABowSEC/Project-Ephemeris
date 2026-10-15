@@ -27,8 +27,8 @@ export default function TrackButton({ launch, size = 'sm' }: TrackButtonProps) {
         icon={tracked ? <FaStar /> : <FaRegStar />}
         size={size}
         variant="ghost"
-        color={tracked ? 'orange.400' : 'text.secondary'}
-        _hover={{ color: 'orange.300', bg: 'whiteAlpha.100' }}
+        color={tracked ? 'accent.tracked' : 'text.secondary'}
+        _hover={{ color: 'amber.100', bg: 'whiteAlpha.100' }}
         onClick={(e) => {
           e.stopPropagation();
           toggleFavorite(launch.id);

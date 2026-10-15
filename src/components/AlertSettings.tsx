@@ -64,7 +64,7 @@ export default function AlertSettings() {
         iconSpacing={{ base: 0, sm: 2 }}
         size="sm"
         variant={enabled ? 'solid' : 'outline'}
-        colorScheme="orange"
+        colorScheme="amber"
         onClick={() => (enabled ? setEnabled(false) : enableAlerts())}
       >
         <Box as="span" display={{ base: 'none', sm: 'inline' }}>
