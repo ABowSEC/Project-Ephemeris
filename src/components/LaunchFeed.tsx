@@ -25,6 +25,7 @@ import ErrorState from './ErrorState';
 import StatusBadge from './StatusBadge';
 import { formatNet, launchPath, launchTime, providerName } from '../utils/launchFields';
 import { useCountdown } from '../hooks/useCountdown';
+import type { LaunchListItem } from '../types/launchLibrary';
 
 const MotionBox = motion(Box);
 const MotionImage = motion(Image);
@@ -34,7 +35,7 @@ const MotionImage = motion(Image);
 // scan the top of.
 const PAGE_SIZE = 12;
 
-const AGENCY_LOGOS = {
+const AGENCY_LOGOS: Record<string, string> = {
   NASA: '/logos/nasa.jpg',
   SpaceX: '/logos/spacex.jpeg',
   ULA: '/logos/ula.jpg',
@@ -45,10 +46,11 @@ const AGENCY_LOGOS = {
   'Blue Origin': '/logos/blueorigin.jpg',
 };
 
-const agencyLogo = (agency) => AGENCY_LOGOS[agency] ?? '/logos/defaultAgency.jpg';
+const agencyLogo = (agency: string | null) =>
+  (agency && AGENCY_LOGOS[agency]) || '/logos/defaultAgency.jpg';
 
 /** Compact T-minus line for a card. The full clock lives on the detail page. */
-function CardCountdown({ launch }) {
+function CardCountdown({ launch }: { launch: LaunchListItem }) {
   const countdown = useCountdown(launchTime(launch));
 
   if (!countdown) {
@@ -79,7 +81,13 @@ function CardCountdown({ launch }) {
  * linkable, shareable, and previews properly when posted — so the card's only
  * job is to identify the launch and get you there.
  */
-function LaunchCard({ launch, index = 0, reduceMotion = false }) {
+interface LaunchCardProps {
+  launch: LaunchListItem;
+  index?: number;
+  reduceMotion?: boolean;
+}
+
+function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps) {
   const provider = providerName(launch);
 
   return (
@@ -88,7 +96,8 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }) {
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.5, ease: 'easeOut', delay: (index % 2) * 0.08 }}
+      // framer-motion's transition, not Chakra's CSS transition prop
+      transition={{ duration: 0.5, ease: 'easeOut', delay: (index % 2) * 0.08 } as never}
       whileHover={reduceMotion ? undefined : { y: -4 }}
       bg="bg.card"
       border="1px solid"
@@ -266,7 +275,7 @@ export default function LaunchFeed() {
                 key={launch.id}
                 launch={launch}
                 index={index}
-                reduceMotion={reduceMotion}
+                reduceMotion={Boolean(reduceMotion)}
               />
             ))}
           </SimpleGrid>

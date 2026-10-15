@@ -82,7 +82,7 @@ export default function LaunchDetailPage() {
   // launches feed wired up yet.
   const related = useMemo(() => {
     if (!launch) return [] as LaunchListItem[];
-    const candidates = (upcoming as LaunchListItem[]).filter((l) => l.slug !== launch.slug);
+    const candidates = upcoming.filter((l) => l.slug !== launch.slug);
 
     const providerId = launch.launch_service_provider?.id;
     const rocketConfigId = launch.rocket?.configuration?.id;

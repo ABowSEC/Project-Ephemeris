@@ -1,13 +1,15 @@
 // Calendar export helpers: build a Google Calendar prefill URL or download
 // an .ics file so a launch shows up in the user's own calendar app.
 
+import type { AnyLaunch } from '../types/launchLibrary';
+
 // 2026-07-15T12:34:56Z -> 20260715T123456Z (UTC basic format both formats use)
-function toCalendarUtc(dateString) {
+function toCalendarUtc(dateString: string): string {
   const d = new Date(dateString);
   return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 }
 
-function launchTimes(launch) {
+function launchTimes(launch: AnyLaunch): { start: string; end: string } {
   const start = launch.window_start ?? launch.net;
   // Fall back to a one-hour block when the API gives no window end
   const end =
@@ -17,23 +19,23 @@ function launchTimes(launch) {
   return { start, end };
 }
 
-function launchDetails(launch) {
+function launchDetails(launch: AnyLaunch): string {
   const lines = [
     launch.launch_service_provider?.name,
     launch.rocket?.configuration?.name && `Rocket: ${launch.rocket.configuration.name}`,
     launch.mission?.description,
-    launch.vid_urls?.[0]?.url && `Watch: ${launch.vid_urls[0].url}`,
+    'vid_urls' in launch && launch.vid_urls?.[0]?.url && `Watch: ${launch.vid_urls[0].url}`,
     'Tracked via Ephemeris',
   ];
   return lines.filter(Boolean).join('\n');
 }
 
-function launchLocation(launch) {
+function launchLocation(launch: AnyLaunch): string {
   return [launch.pad?.name, launch.pad?.location?.name].filter(Boolean).join(', ');
 }
 
 /** Prefilled Google Calendar "create event" URL for a launch. */
-export function googleCalendarUrl(launch) {
+export function googleCalendarUrl(launch: AnyLaunch): string {
   const { start, end } = launchTimes(launch);
   const params = new URLSearchParams({
     action: 'TEMPLATE',
@@ -46,7 +48,7 @@ export function googleCalendarUrl(launch) {
 }
 
 // RFC 5545 requires escaping backslash, semicolon, comma, and newlines
-function escapeIcsText(text) {
+function escapeIcsText(text: string): string {
   return String(text)
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
@@ -55,7 +57,7 @@ function escapeIcsText(text) {
 }
 
 /** Build the .ics file body for a launch. */
-export function buildIcs(launch) {
+export function buildIcs(launch: AnyLaunch): string {
   const { start, end } = launchTimes(launch);
   return [
     'BEGIN:VCALENDAR',
@@ -82,7 +84,7 @@ export function buildIcs(launch) {
 }
 
 /** Trigger a browser download of the launch as an .ics calendar file. */
-export function downloadIcs(launch) {
+export function downloadIcs(launch: AnyLaunch): void {
   const blob = new Blob([buildIcs(launch)], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

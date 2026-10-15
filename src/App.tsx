@@ -76,7 +76,7 @@ const navigationItems = [
 // Exact match everywhere except for sections with child routes: a launch
 // detail page at /launches/<slug> should still light up the Launches tab.
 // '/' is exact-only or it would match every route.
-const isActiveNav = (pathname, path) =>
+const isActiveNav = (pathname: string, path: string) =>
   pathname === path || (path !== '/' && pathname.startsWith(`${path}/`));
 
 // /solarsim is intentionally unlisted // reachable via the Konami code

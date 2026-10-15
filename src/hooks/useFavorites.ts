@@ -7,16 +7,16 @@ import { useCallback, useEffect, useState } from 'react';
 const KEY = 'ephemeris.favorites.v1';
 const CHANGE_EVENT = 'ephemeris:favorites-changed';
 
-function readFavorites() {
+function readFavorites(): string[] {
   try {
-    const parsed = JSON.parse(localStorage.getItem(KEY));
+    const parsed = JSON.parse(localStorage.getItem(KEY) ?? 'null');
     return Array.isArray(parsed?.launches) ? parsed.launches : [];
   } catch {
     return [];
   }
 }
 
-function writeFavorites(launches) {
+function writeFavorites(launches: string[]) {
   try {
     localStorage.setItem(KEY, JSON.stringify({ launches }));
   } catch {
@@ -25,14 +25,14 @@ function writeFavorites(launches) {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
-/**
- * @returns {{
- *   favorites: string[],            Launch IDs the user is tracking
- *   isFavorite: (id: string) => boolean,
- *   toggleFavorite: (id: string) => void,
- * }}
- */
-export function useFavorites() {
+export interface FavoritesState {
+  /** Launch IDs the user is tracking */
+  favorites: string[];
+  isFavorite: (id: string) => boolean;
+  toggleFavorite: (id: string) => void;
+}
+
+export function useFavorites(): FavoritesState {
   const [favorites, setFavorites] = useState(readFavorites);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function useFavorites() {
     };
   }, []);
 
-  const toggleFavorite = useCallback((id) => {
+  const toggleFavorite = useCallback((id: string) => {
     const current = readFavorites();
     const next = current.includes(id)
       ? current.filter((f) => f !== id)
@@ -53,7 +53,7 @@ export function useFavorites() {
     writeFavorites(next);
   }, []);
 
-  const isFavorite = useCallback((id) => favorites.includes(id), [favorites]);
+  const isFavorite = useCallback((id: string) => favorites.includes(id), [favorites]);
 
   return { favorites, isFavorite, toggleFavorite };
 }

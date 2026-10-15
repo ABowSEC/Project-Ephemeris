@@ -1,19 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type DependencyList } from 'react';
+
+/** Options forwarded to the fetcher; `background` is consumed by refetch itself. */
+export type FetcherOptions = Record<string, unknown>;
+
+export interface RefetchOptions extends FetcherOptions {
+  background?: boolean;
+}
+
+export interface ApiResult<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+  refetch: (options?: RefetchOptions) => Promise<void>;
+}
 
 /**
  * Data-fetching hook: runs `fetcher` on mount and whenever `deps` change,
  * aborting any in-flight request first so a stale response can never
  * overwrite a newer one.
  *
- * @param {(signal: AbortSignal, options: Object) => Promise<any>} fetcher
- * @param {Array} deps - Values the fetcher closes over (like useEffect deps)
- * @returns {{ data, loading, error, refetch }}
- *   refetch({ background: true }) re-fetches without flipping `loading`,
- *   for silent polling that shouldn't replace content with a spinner.
- *   Any other keys in the options object passed to refetch (e.g. `force`)
- *   are forwarded to `fetcher` as its second argument, so a caller can ask
- *   for a real re-fetch rather than whatever cache the fetcher would
- *   otherwise consult.
+ * refetch({ background: true }) re-fetches without flipping `loading`,
+ * for silent polling that shouldn't replace content with a spinner.
+ * Any other keys in the options object passed to refetch (e.g. `force`)
+ * are forwarded to `fetcher` as its second argument, so a caller can ask
+ * for a real re-fetch rather than whatever cache the fetcher would
+ * otherwise consult.
  *
  * @example
  * const { data, loading, error, refetch } = useApi(
@@ -21,13 +32,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *   [page]
  * );
  */
-export function useApi(fetcher, deps = []) {
-  const [data, setData] = useState(null);
+export function useApi<T>(
+  fetcher: (signal: AbortSignal, options: FetcherOptions) => Promise<T>,
+  deps: DependencyList = []
+): ApiResult<T> {
+  const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const controllerRef = useRef(null);
+  const [error, setError] = useState<string | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
 
-  const refetch = useCallback(async ({ background = false, ...fetcherOptions } = {}) => {
+  const refetch = useCallback(async ({ background = false, ...fetcherOptions }: RefetchOptions = {}) => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -45,7 +59,7 @@ export function useApi(fetcher, deps = []) {
       setLoading(false);
     } catch (err) {
       if (controller.signal.aborted) return;
-      setError(err.message || 'Something went wrong.');
+      setError((err instanceof Error && err.message) || 'Something went wrong.');
       setLoading(false);
     }
     // The caller's deps array stands in for `fetcher`, exactly like useEffect deps

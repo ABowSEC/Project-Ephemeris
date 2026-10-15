@@ -1,9 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ChakraProvider } from '@chakra-ui/react'
+import type { ComponentProps } from 'react'
 import { registerSW } from 'virtual:pwa-register'
 import theme from './theme' // optional custom theme
-import App from './App.jsx'
+import App from './App'
 
 // Service worker: precaches the app shell and keeps launch data, map tiles,
 // and images available offline. autoUpdate swaps in new versions silently.
@@ -22,14 +23,14 @@ registerSW({ immediate: true })
 //
 // get() ignores the stored value entirely and set() is a no-op, so nothing a
 // user or another tab writes to that key can change the rendering.
-const forceDarkMode = {
+const forceDarkMode: NonNullable<ComponentProps<typeof ChakraProvider>['colorModeManager']> = {
   type: 'localStorage',
   ssr: false,
   get: () => 'dark',
   set: () => {},
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ChakraProvider theme={theme} colorModeManager={forceDarkMode}>
       <App />

@@ -2,7 +2,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { Box, HStack, Text } from '@chakra-ui/react';
 import { keyframes } from '@emotion/react';
 import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches';
-import { useCountdown } from '../hooks/useCountdown';
+import { useCountdown, type TimeLeft } from '../hooks/useCountdown';
 import { launchTime } from '../utils/launchFields';
 
 // Radar ping: the dot stays lit and emits a soft expanding ring, reading
@@ -15,8 +15,8 @@ const ping = keyframes`
 
 // Console-style T-minus readout. Seconds only show inside 24h, where the
 // live tick earns its place; further out, minutes are enough.
-function formatCountdown({ d, h, m, s }) {
-  const pad = (n) => String(n).padStart(2, '0');
+function formatCountdown({ d, h, m, s }: TimeLeft): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
   if (d > 0) return `T-${d}d ${pad(h)}:${pad(m)}`;
   return `T-${pad(h)}:${pad(m)}:${pad(s)}`;
 }
