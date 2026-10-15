@@ -11,7 +11,7 @@ import {
 } from '@chakra-ui/react';
 import type { MouseEvent } from 'react';
 import { FaGoogle, FaRegCalendarPlus } from 'react-icons/fa';
-import { downloadIcs, googleCalendarUrl } from '../../utils/calendar';
+import { canAddToCalendar, downloadIcs, googleCalendarUrl } from '../../utils/calendar';
 import type { AnyLaunch } from '../../types/launchLibrary';
 
 interface CalendarMenuProps {
@@ -28,6 +28,9 @@ interface CalendarMenuProps {
  */
 export default function CalendarMenu({ launch, variant = 'icon', size = 'sm' }: CalendarMenuProps) {
   const stop = (e: MouseEvent) => e.stopPropagation();
+
+  // Launches known only to the month or later have nothing to put in a calendar
+  if (!canAddToCalendar(launch)) return null;
 
   return (
     <Menu placement="bottom-end" isLazy>
@@ -66,7 +69,7 @@ export default function CalendarMenu({ launch, variant = 'icon', size = 'sm' }: 
               <MenuList bg="bg.card" borderColor="border.default" zIndex="popover" onClick={stop}>
                 <MenuItem
                   as="a"
-                  href={googleCalendarUrl(launch)}
+                  href={googleCalendarUrl(launch) ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   icon={<FaGoogle />}
