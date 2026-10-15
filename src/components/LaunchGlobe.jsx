@@ -10,6 +10,7 @@ import { OrbitControls } from '../utils/OrbitControls';
 import { useAnimationFrame } from '../hooks/useAnimationFrame';
 import { useFullscreen } from '../hooks/useFullscreen';
 import { useSyncedRef } from '../hooks/useSyncedRef';
+import { withAlpha } from "../utils/color";
 
 // How long the globe must sit untouched before it starts drifting again.
 // Long enough that a deliberate flick-and-let-go doesn't immediately get
@@ -513,7 +514,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
         gap={2}
         px={3}
         py={2}
-        bg="rgba(6, 9, 26, 0.72)"
+        bg={withAlpha('bg.body', 72)}
         backdropFilter="blur(14px)"
         borderBottom="1px solid rgba(255,255,255,0.06)"
         zIndex={10}
@@ -589,7 +590,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
             right={0}
             bottom={0}
             w={{ base: '100%', sm: '320px' }}
-            bg="rgba(6, 9, 26, 0.85)"
+            bg={withAlpha('bg.body', 85)}
             backdropFilter="blur(14px)"
             borderLeft="1px solid rgba(255,255,255,0.08)"
             overflowY="auto"

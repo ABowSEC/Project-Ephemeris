@@ -130,7 +130,7 @@ export default function LaunchPage() {
                 to="/map"
                 size="sm"
                 variant="outline"
-                colorScheme="teal"
+                colorScheme="brand"
                 leftIcon={<Icon as={FaMapMarkerAlt} boxSize={3} />}
               >
                 World launch map

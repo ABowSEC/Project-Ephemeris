@@ -49,6 +49,7 @@ import { DISCOVER_NAV, PRIMARY_NAV, isActiveNav, type NavItem } from './data/nav
 import Footer from './components/Footer';
 import { useKonamiCode } from './hooks/useKonamiCode';
 import { useLaunchAlerts } from './hooks/useLaunchAlerts';
+import { withAlpha } from './utils/color';
 
 // Named alias: ESLint's no-unused-vars can't see `motion` used as <motion.div>
 const MotionDiv = motion.div;
@@ -107,7 +108,7 @@ function Navigation() {
       borderBottom="1px solid"
       borderColor="border.default"
       backdropFilter="blur(16px)"
-      bg="rgba(6, 9, 26, 0.80)"
+      bg={withAlpha('bg.body', 80)}
     >
       <Container maxW="7xl">
         <Flex as="nav" align="center" h="56px" gap={1}>

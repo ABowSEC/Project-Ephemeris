@@ -11,6 +11,7 @@ import { useSyncedRef } from '../hooks/useSyncedRef';
 import { planetOrbitData, planetData } from '../utils/planetData';
 import { createSolarSystemScene, setupResizeHandler } from '../utils/sceneSetup';
 import { OrbitControls } from '../utils/OrbitControls';
+import { withAlpha } from "../utils/color";
 
 // Named alias: ESLint's no-unused-vars can't see `motion` used as <motion.div>
 const MotionDiv = motion.div;
@@ -396,7 +397,7 @@ export default function SolarSystemView() {
         justify="space-between"
         px={4}
         h="44px"
-        bg="rgba(6, 9, 26, 0.72)"
+        bg={withAlpha('bg.body', 72)}
         backdropFilter="blur(14px)"
         borderBottom="1px solid rgba(255,255,255,0.06)"
         zIndex={10}
@@ -453,7 +454,7 @@ export default function SolarSystemView() {
             }}
           >
             <Box
-              bg="rgba(6, 9, 26, 0.88)"
+              bg={withAlpha('bg.body', 88)}
               backdropFilter="blur(16px)"
               border="1px solid rgba(255,255,255,0.08)"
               borderRadius="lg"
@@ -513,7 +514,7 @@ export default function SolarSystemView() {
       <Box
         position="absolute"
         bottom={0} left={0} right={0}
-        bg="rgba(6, 9, 26, 0.80)"
+        bg={withAlpha('bg.body', 80)}
         backdropFilter="blur(14px)"
         borderTop="1px solid rgba(255,255,255,0.06)"
         zIndex={10}

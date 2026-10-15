@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Box, Flex, HStack, Heading, Text, VStack } from '@chakra-ui/react';
+import { withAlpha } from '../utils/color';
 
 export interface LaunchHeroProps {
   image?: string | null;
@@ -49,7 +50,7 @@ export default function LaunchHero({
       <Box
         position="absolute"
         inset={0}
-        bgGradient="linear(to-r, rgba(6,9,26,0.95) 25%, rgba(6,9,26,0.6) 55%, rgba(6,9,26,0.2))"
+        bgImage={`linear-gradient(to right, ${withAlpha('bg.body', 95)} 25%, ${withAlpha('bg.body', 60)} 55%, ${withAlpha('bg.body', 20)})`}
       />
       {bottomVignette && (
         <Box
@@ -58,7 +59,7 @@ export default function LaunchHero({
           left={0}
           right={0}
           h="80px"
-          bgGradient="linear(to-t, rgba(6,9,26,0.9), transparent)"
+          bgImage={`linear-gradient(to top, ${withAlpha('bg.body', 90)}, transparent)`}
         />
       )}
 

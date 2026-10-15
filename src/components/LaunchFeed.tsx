@@ -28,6 +28,7 @@ import StatusBadge from './StatusBadge';
 import { formatNet, launchPath, providerName } from '../utils/launchFields';
 import { useLaunchCountdown } from '../hooks/useCountdown';
 import type { LaunchListItem } from '../types/launchLibrary';
+import { withAlpha } from '../utils/color';
 
 const MotionBox = motion(Box);
 const MotionImage = motion(Image);
@@ -121,20 +122,9 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
       position="relative"
       data-group
       _hover={{
-        shadow: '0 12px 32px -12px var(--chakra-colors-blue-500)',
-        borderColor: 'blue.400',
+        borderColor: 'border.controlHover',
       }}
     >
-      <Box
-        position="absolute"
-        top={0}
-        left={0}
-        right={0}
-        h="3px"
-        bgGradient="linear(to-r, teal.400, blue.400, purple.400)"
-        zIndex={3}
-      />
-
       <Box position="relative" h={{ base: '190px', md: '210px' }} overflow="hidden">
         {launch.image ? (
           <MotionImage
@@ -143,18 +133,18 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
             w="100%"
             h="100%"
             objectFit="cover"
-            fallback={<Box h="100%" bgGradient="linear(to-br, blue.900, purple.900)" />}
+            fallback={<Box h="100%" bg="bg.elevated" />}
             transition="transform 0.7s ease"
             _groupHover={reduceMotion ? undefined : { transform: 'scale(1.06)' }}
           />
         ) : (
-          <Box h="100%" w="100%" bgGradient="linear(to-br, blue.900, purple.900)" />
+          <Box h="100%" w="100%" bg="bg.elevated" />
         )}
 
         <Box
           position="absolute"
           inset={0}
-          bg="linear-gradient(to bottom, rgba(11,17,32,0.15) 0%, rgba(11,17,32,0.15) 45%, rgba(11,17,32,0.92) 100%)"
+          bgImage={`linear-gradient(to bottom, ${withAlpha('bg.card', 15)} 0%, ${withAlpha('bg.card', 15)} 45%, ${withAlpha('bg.card', 92)} 100%)`}
         />
 
         {/* The track and calendar buttons sit above the overlay so using
@@ -248,7 +238,7 @@ export default function LaunchFeed() {
   if (loading) {
     return (
       <VStack spacing={6} py={10}>
-        <Spinner size="xl" color="blue.400" thickness="4px" />
+        <Spinner size="xl" color="brand.primary" thickness="4px" />
         <Text color="text.secondary">Loading upcoming launches...</Text>
       </VStack>
     );
