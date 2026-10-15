@@ -106,11 +106,12 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
     <LinkBox
       as={MotionBox}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 28 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      // Transitions ride on each target: a top-level transition prop collides
+      // with Chakra's CSS transition prop, and it also gave the hover lift
+      // the reveal's stagger delay
+      whileInView={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut', delay: (index % 2) * 0.08 } }}
       viewport={{ once: true, margin: '-60px' }}
-      // framer-motion's transition, not Chakra's CSS transition prop
-      transition={{ duration: 0.5, ease: 'easeOut', delay: (index % 2) * 0.08 } as never}
-      whileHover={reduceMotion ? undefined : { y: -4 }}
+      whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
       bg="bg.card"
       border="1px solid"
       borderColor="border.default"
