@@ -1,11 +1,13 @@
-import { Button, HStack, Icon, Text, useToast } from '@chakra-ui/react';
+import { IconButton, Tooltip, useToast } from '@chakra-ui/react';
 import { FaBell, FaRegBell } from 'react-icons/fa';
 import { useAlertsEnabled } from '../hooks/useLaunchAlerts';
 
 /**
- * Toggle for launch alerts. Enabling requests browser notification
- * permission; if it's unavailable or denied, alerts still work as
- * in-app toasts while the site is open.
+ * Bell toggle for launch alerts, sized to sit beside the feed's Tracked
+ * filter: alerts only ever fire for tracked launches, so the two controls
+ * belong together. Enabling requests browser notification permission; if
+ * it's unavailable or denied, alerts still work as in-app toasts while the
+ * site is open.
  */
 export default function AlertSettings() {
   const { enabled, setEnabled } = useAlertsEnabled();
@@ -46,20 +48,21 @@ export default function AlertSettings() {
     });
   };
 
+  const label = enabled
+    ? 'Launch alerts on: tracked launches notify you at T-60min, T-10min, and liftoff'
+    : 'Turn on alerts for tracked launches';
+
   return (
-    <HStack spacing={3} flexShrink={0}>
-      <Text fontSize="sm" color="text.secondary" display={{ base: 'none', sm: 'block' }}>
-        Launch alerts
-      </Text>
-      <Button
+    <Tooltip label={label} hasArrow>
+      <IconButton
+        aria-label={enabled ? 'Turn off launch alerts' : 'Turn on launch alerts'}
+        aria-pressed={enabled}
+        icon={enabled ? <FaBell /> : <FaRegBell />}
         size="sm"
         variant={enabled ? 'solid' : 'outline'}
         colorScheme="orange"
-        leftIcon={<Icon as={enabled ? FaBell : FaRegBell} />}
         onClick={() => (enabled ? setEnabled(false) : enableAlerts())}
-      >
-        {enabled ? 'On' : 'Off'}
-      </Button>
-    </HStack>
+      />
+    </Tooltip>
   );
 }

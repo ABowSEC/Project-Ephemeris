@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Button, HStack, Icon, Link, useToast } from '@chakra-ui/react';
+import { Button, HStack, Icon, useToast } from '@chakra-ui/react';
 import { CheckIcon, LinkIcon } from '@chakra-ui/icons';
-import { FaRegCalendarPlus, FaGoogle, FaShareAlt } from 'react-icons/fa';
-// calendar.js is untyped JS; both helpers take a launch object
-import { downloadIcs, googleCalendarUrl } from '../../utils/calendar';
+import { FaShareAlt } from 'react-icons/fa';
 import TrackButton from '../TrackButton';
+import CalendarMenu from './CalendarMenu';
 import type { AnyLaunch } from '../../types/launchLibrary';
 
 /**
@@ -66,28 +65,7 @@ export default function ShareBar({ launch }: { launch: AnyLaunch }) {
         {canShare ? 'Share' : copied ? 'Copied' : 'Copy link'}
       </Button>
 
-      <Button
-        size="sm"
-        variant="outline"
-        colorScheme="brand"
-        leftIcon={<Icon as={FaRegCalendarPlus} />}
-        onClick={() => downloadIcs(launch)}
-      >
-        Add to calendar
-      </Button>
-
-      <Button
-        as={Link}
-        href={googleCalendarUrl(launch)}
-        isExternal
-        size="sm"
-        variant="outline"
-        colorScheme="blue"
-        leftIcon={<Icon as={FaGoogle} />}
-        _hover={{ textDecoration: 'none' }}
-      >
-        Google Calendar
-      </Button>
+      <CalendarMenu launch={launch} variant="button" />
     </HStack>
   );
 }

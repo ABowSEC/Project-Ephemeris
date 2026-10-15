@@ -14,7 +14,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { ChevronLeftIcon, ExternalLinkIcon } from '@chakra-ui/icons';
+import { ExternalLinkIcon } from '@chakra-ui/icons';
 import { FaRocket, FaCloudSun } from 'react-icons/fa';
 import ErrorState from '../components/ErrorState';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -31,7 +31,6 @@ import LaunchLighting from '../components/launch/LaunchLighting';
 import { useLaunchDetail } from '../hooks/useLaunchDetail';
 import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { statusStyle } from '../data/launchStatus';
 import {
   buildLaunchDescription,
   buildLaunchTitle,
@@ -142,7 +141,6 @@ export default function LaunchDetailPage() {
 
   if (!launch) return null;
 
-  const style = statusStyle(launch.status);
   const provider = providerName(launch);
   const rocket = rocketName(launch);
   const rocketConfig = launch.rocket?.configuration;
@@ -150,6 +148,7 @@ export default function LaunchDetailPage() {
   const probability = weatherProbability(launch);
   const displayName = missionDisplayName(launch);
   const summary = buildMissionSummary(launch);
+  const hasPatches = Boolean(launch.mission_patches?.length);
 
   return (
     <Container maxW="6xl" py={8}>
@@ -161,17 +160,6 @@ export default function LaunchDetailPage() {
             { label: displayName },
           ]}
         />
-
-        <Link
-          as={RouterLink}
-          to="/launches"
-          fontSize="sm"
-          color="text.secondary"
-          alignSelf="flex-start"
-          _hover={{ color: 'brand.300', textDecoration: 'none' }}
-        >
-          <ChevronLeftIcon /> All launches
-        </Link>
 
         {/* Hero */}
         <LaunchHero
@@ -224,13 +212,18 @@ export default function LaunchDetailPage() {
           </VStack>
         )}
 
-        {/* Mission Overview */}
+        {/* Watch: what most visitors come for around launch time */}
+        <Box as="section" aria-label="Webcast">
+          <WebcastPanel launch={launch} />
+        </Box>
+
+        {/* Mission: the overview, its patch, and outside reading */}
         <Box as="section">
           <Heading as="h2" size="md" mb={4}>
-            Mission Overview
+            Mission
           </Heading>
-          <VStack align="stretch" spacing={6}>
-            <Card p={5}>
+          <SimpleGrid columns={{ base: 1, md: hasPatches ? 3 : 1 }} spacing={6}>
+            <Card p={5} gridColumn={{ md: hasPatches ? 'span 2' : undefined }}>
               <HStack spacing={2} mb={3}>
                 <Icon as={FaRocket} color="text.secondary" />
                 <Text fontWeight="600">
@@ -246,15 +239,29 @@ export default function LaunchDetailPage() {
                   Target orbit: <Text as="span" color="text.primary">{launch.mission.orbit.name}</Text>
                 </Text>
               )}
+              {launch.infoURLs && launch.infoURLs.length > 0 && (
+                <Box mt={4} pt={4} borderTop="1px solid" borderColor="border.default">
+                  <Text fontSize="xs" color="text.secondary" mb={2} textTransform="uppercase" letterSpacing="wider">
+                    More information
+                  </Text>
+                  <VStack align="stretch" spacing={1.5}>
+                    {launch.infoURLs.map((info) => (
+                      <Link key={info.url} href={info.url} isExternal fontSize="sm" color="brand.300">
+                        {info.title ?? info.url} <ExternalLinkIcon mx="2px" mb="2px" />
+                      </Link>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
             </Card>
 
-            {launch.mission_patches && launch.mission_patches.length > 0 && (
+            {hasPatches && (
               <Card p={5}>
                 <Heading as="h3" size="sm" mb={4}>
                   Mission Patch
                 </Heading>
-                <HStack spacing={4}>
-                  {launch.mission_patches.map((patch) => (
+                <HStack spacing={4} flexWrap="wrap">
+                  {launch.mission_patches?.map((patch) => (
                     <Image
                       key={patch.id}
                       src={patch.image_url}
@@ -266,16 +273,15 @@ export default function LaunchDetailPage() {
                 </HStack>
               </Card>
             )}
-          </VStack>
+          </SimpleGrid>
         </Box>
 
-        {/* Launch Details */}
+        {/* Launch day: lighting conditions and the upstream update log */}
         <Box as="section">
           <Heading as="h2" size="md" mb={4}>
-            Launch Details
+            Launch Day
           </Heading>
           <VStack align="stretch" spacing={6}>
-            <WebcastPanel launch={launch} />
             <LaunchLighting launch={launch} />
             {launch.updates && launch.updates.length > 0 && (
               <MissionUpdates updates={launch.updates} />
@@ -283,94 +289,67 @@ export default function LaunchDetailPage() {
           </VStack>
         </Box>
 
-        {/* Rocket */}
-        {(rocket || provider) && (
+        {/* Vehicle & Site: two thin sections merged into one */}
+        {(rocket || provider || launch.pad) && (
           <Box as="section">
             <Heading as="h2" size="md" mb={4}>
-              Rocket
+              Vehicle &amp; Site
             </Heading>
             <VStack align="stretch" spacing={6}>
-              <Card p={5}>
-                <Heading as="h3" size="sm" mb={2}>
-                  {rocket ?? 'Rocket'}
-                </Heading>
-                {rocketConfig?.family && (
-                  <Text fontSize="sm" color="text.secondary">
-                    Family: <Text as="span" color="text.primary">{rocketConfig.family}</Text>
-                  </Text>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                {(rocket || provider) && (
+                  <Card p={5}>
+                    <Text fontSize="xs" color="text.secondary" textTransform="uppercase" letterSpacing="wider" mb={1}>
+                      Rocket
+                    </Text>
+                    <Heading as="h3" size="sm" mb={2}>
+                      {rocket ?? 'Rocket'}
+                    </Heading>
+                    {rocketConfig?.family && (
+                      <Text fontSize="sm" color="text.secondary">
+                        Family: <Text as="span" color="text.primary">{rocketConfig.family}</Text>
+                      </Text>
+                    )}
+                    {provider && (
+                      <Text fontSize="sm" color="text.secondary">
+                        Operated by <Text as="span" color="text.primary">{provider}</Text>
+                      </Text>
+                    )}
+                  </Card>
                 )}
-                {provider && (
-                  <Text fontSize="sm" color="text.secondary">
-                    Operated by <Text as="span" color="text.primary">{provider}</Text>
-                  </Text>
+
+                {launch.pad && (
+                  <Card p={5}>
+                    <Text fontSize="xs" color="text.secondary" textTransform="uppercase" letterSpacing="wider" mb={1}>
+                      Launch site
+                    </Text>
+                    <Heading as="h3" size="sm" mb={2}>
+                      {launch.pad.name}
+                    </Heading>
+                    {launch.pad.location?.name && (
+                      <Text fontSize="sm" color="text.secondary">
+                        {launch.pad.location.name}
+                      </Text>
+                    )}
+                    <HStack spacing={4} mt={3} flexWrap="wrap">
+                      {launch.pad.map_url && (
+                        <Link href={launch.pad.map_url} isExternal fontSize="sm" color="brand.300">
+                          Open in Maps <ExternalLinkIcon mx="2px" mb="2px" />
+                        </Link>
+                      )}
+                      {launch.pad.wiki_url && (
+                        <Link href={launch.pad.wiki_url} isExternal fontSize="sm" color="brand.300">
+                          Wikipedia <ExternalLinkIcon mx="2px" mb="2px" />
+                        </Link>
+                      )}
+                    </HStack>
+                  </Card>
                 )}
-              </Card>
+              </SimpleGrid>
               <LaunchStats launch={launch} />
             </VStack>
           </Box>
         )}
-
-        {/* Launch Site */}
-        {launch.pad && (
-          <Box as="section">
-            <Heading as="h2" size="md" mb={4}>
-              Launch Site
-            </Heading>
-            <Card p={5}>
-              <Text fontSize="sm">{launch.pad.name}</Text>
-              {launch.pad.location?.name && (
-                <Text fontSize="sm" color="text.secondary">
-                  {launch.pad.location.name}
-                </Text>
-              )}
-              <HStack spacing={4} mt={3} flexWrap="wrap">
-                {launch.pad.map_url && (
-                  <Link href={launch.pad.map_url} isExternal fontSize="sm" color="brand.300">
-                    Open in Maps <ExternalLinkIcon mx="2px" mb="2px" />
-                  </Link>
-                )}
-                {launch.pad.wiki_url && (
-                  <Link href={launch.pad.wiki_url} isExternal fontSize="sm" color="brand.300">
-                    Wikipedia <ExternalLinkIcon mx="2px" mb="2px" />
-                  </Link>
-                )}
-              </HStack>
-            </Card>
-          </Box>
-        )}
-
-        {/* Mission Status */}
-        <Box as="section">
-          <Heading as="h2" size="md" mb={4}>
-            Mission Status
-          </Heading>
-          <VStack align="stretch" spacing={6}>
-            <Card p={5}>
-              <Text fontSize="sm">
-                This mission is currently{' '}
-                <Text as="span" fontWeight="600" color="text.primary">
-                  {style.label}
-                </Text>
-                .
-              </Text>
-            </Card>
-
-            {launch.infoURLs && launch.infoURLs.length > 0 && (
-              <Card p={5}>
-                <Heading as="h3" size="sm" mb={3}>
-                  More Information
-                </Heading>
-                <VStack align="stretch" spacing={2}>
-                  {launch.infoURLs.map((info) => (
-                    <Link key={info.url} href={info.url} isExternal fontSize="sm" color="brand.300">
-                      {info.title ?? info.url} <ExternalLinkIcon mx="2px" mb="2px" />
-                    </Link>
-                  ))}
-                </VStack>
-              </Card>
-            )}
-          </VStack>
-        </Box>
 
         {/* Related Launches */}
         {related.length > 0 && (

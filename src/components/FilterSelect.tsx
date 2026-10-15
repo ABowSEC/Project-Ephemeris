@@ -46,7 +46,9 @@ export default function FilterSelect({
   const selected = options.find((option) => option.value === value) ?? options[0];
 
   return (
-    <Menu placement="bottom-start" autoSelect={false} matchWidth={false}>
+    // isLazy: a closed list would otherwise still render every option in the
+    // portal, and long provider names widen the page on phones
+    <Menu placement="bottom-start" autoSelect={false} matchWidth={false} isLazy>
       <MenuButton
         type="button"
         aria-label={`Filter by ${label}`}

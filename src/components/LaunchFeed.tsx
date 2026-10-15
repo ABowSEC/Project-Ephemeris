@@ -19,8 +19,10 @@ import {
 import { motion, useReducedMotion } from 'framer-motion';
 import { useUpcomingLaunches } from '../hooks/useUpcomingLaunches';
 import LaunchFilters from './LaunchFilters';
+import AlertSettings from './AlertSettings';
 import { useLaunchFilters } from '../hooks/useLaunchFilters';
 import TrackButton from './TrackButton';
+import CalendarMenu from './launch/CalendarMenu';
 import ErrorState from './ErrorState';
 import StatusBadge from './StatusBadge';
 import { formatNet, launchPath, launchTime, providerName } from '../utils/launchFields';
@@ -49,8 +51,13 @@ const AGENCY_LOGOS: Record<string, string> = {
 const agencyLogo = (agency: string | null) =>
   (agency && AGENCY_LOGOS[agency]) || '/logos/defaultAgency.jpg';
 
-/** Compact T-minus line for a card. The full clock lives on the detail page. */
-function CardCountdown({ launch }: { launch: LaunchListItem }) {
+/**
+ * Compact T-minus line for a card, with the date beneath it. Once there is
+ * nothing to count down to, the date alone takes the countdown's place, so
+ * a card never prints the same date twice. The full clock lives on the
+ * detail page.
+ */
+function CardTiming({ launch }: { launch: LaunchListItem }) {
   const countdown = useCountdown(launchTime(launch));
 
   if (!countdown) {
@@ -67,9 +74,14 @@ function CardCountdown({ launch }: { launch: LaunchListItem }) {
     : [`${countdown.h}h`, `${countdown.m}m`, `${String(countdown.s).padStart(2, '0')}s`];
 
   return (
-    <Text fontSize="sm" fontFamily="mono" color="accent.terminal" letterSpacing="wide">
-      T- {parts.join(' ')}
-    </Text>
+    <Box minW={0}>
+      <Text fontSize="sm" fontFamily="mono" color="accent.terminal" letterSpacing="wide">
+        T- {parts.join(' ')}
+      </Text>
+      <Text fontSize="xs" color="text.secondary" noOfLines={1}>
+        {formatNet(launch)}
+      </Text>
+    </Box>
   );
 }
 
@@ -144,9 +156,10 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
           bg="linear-gradient(to bottom, rgba(11,17,32,0.15) 0%, rgba(11,17,32,0.15) 45%, rgba(11,17,32,0.92) 100%)"
         />
 
-        {/* The track button sits above the overlay so starring a launch doesn't
-            navigate to it. LinkOverlay covers the rest of the card. */}
-        <HStack position="absolute" top={3} right={3} spacing={2} zIndex={3}>
+        {/* The track and calendar buttons sit above the overlay so using
+            them doesn't navigate. LinkOverlay covers the rest of the card. */}
+        <HStack position="absolute" top={3} right={3} spacing={1} zIndex={3}>
+          <CalendarMenu launch={launch} />
           <TrackButton launch={launch} />
           <StatusBadge status={launch.status} size="md" />
         </HStack>
@@ -195,15 +208,12 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
       </Box>
 
       <VStack spacing={2} align="stretch" px={5} py={4}>
-        <HStack justify="space-between" align="baseline" spacing={3}>
-          <CardCountdown launch={launch} />
-          <Text fontSize="xs" color="text.secondary" noOfLines={1} textAlign="right">
+        <HStack justify="space-between" align="start" spacing={3}>
+          <CardTiming launch={launch} />
+          <Text fontSize="xs" color="text.secondary" noOfLines={2} textAlign="right" maxW="50%">
             {launch.pad?.location?.name ?? launch.pad?.name ?? 'Site TBD'}
           </Text>
         </HStack>
-        <Text fontSize="xs" color="text.secondary">
-          {formatNet(launch)}
-        </Text>
       </VStack>
 
       {/* The real click target for the whole card, added last so it paints
@@ -251,7 +261,7 @@ export default function LaunchFeed() {
 
   return (
     <VStack spacing={6} align="stretch">
-      <LaunchFilters state={filters} />
+      <LaunchFilters state={filters} trackingControls={<AlertSettings />} />
 
       {shown.length === 0 ? (
         <Alert status="info" borderRadius="lg">
@@ -293,11 +303,11 @@ export default function LaunchFeed() {
         </>
       )}
 
-      <Box textAlign="center" pt={2}>
-        <Text fontSize="sm" color="text.secondary">
-          Showing {shown.length} of {filters.filtered.length} launches · Data from The Space Devs API
-        </Text>
-      </Box>
+      {/* One quiet footnote; data credits live in the site footer */}
+      <Text fontSize="xs" color="text.secondary" textAlign="center" pt={2}>
+        Showing {shown.length} of {filters.filtered.length} launches · Times in your timezone,
+        subject to change for weather, technical issues, or range conflicts
+      </Text>
     </VStack>
   );
 }
