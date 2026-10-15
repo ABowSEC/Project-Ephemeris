@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { SITE_NAME, SITE_URL, routeMeta } from '../seo/routeMeta';
 
+/** The site-wide 1200×630 share card (public/og-image.png), used by every route without its own image. */
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
+
 interface RouteMetaEntry {
   title: string;
   description: string;
@@ -62,10 +65,10 @@ export function usePageMeta(path: string, override: PageMetaOverride | null = nu
     setContent('meta[name="twitter:title"]', title);
     setContent('meta[name="twitter:description"]', description);
 
-    if (image) {
-      setContent('meta[property="og:image"]', image);
-      setContent('meta[name="twitter:image"]', image);
-    }
+    // Always set, so a launch page's mission image doesn't linger on the
+    // next page the visitor navigates to
+    setContent('meta[property="og:image"]', image ?? DEFAULT_OG_IMAGE);
+    setContent('meta[name="twitter:image"]', image ?? DEFAULT_OG_IMAGE);
 
     let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!canonical) {

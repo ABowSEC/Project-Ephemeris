@@ -140,7 +140,9 @@ export async function onRequestGet(context: Ll2Context): Promise<Response> {
   const title = `${buildLaunchTitle(launch)} · ${SITE_NAME}`;
   const description = buildLaunchDescription(launch);
   const url = `${SITE_URL}/launches/${slug}`;
-  const image = launch.image ?? `${SITE_URL}/icons/icon-512.png`;
+  // Fall back to the site-wide 1200x630 share card, which matches the size
+  // the shell already declares
+  const image = launch.image ?? `${SITE_URL}/og-image.png`;
 
   let rewriter = new HTMLRewriter().on('title', {
     element(el) {
@@ -163,7 +165,7 @@ export async function onRequestGet(context: Ll2Context): Promise<Response> {
   rewriter = setMeta(rewriter, 'meta[property="og:type"]', 'article');
 
   if (launch.image) {
-    // The shell declares 512x512 for the square logo. Mission photos are
+    // The shell declares 1200x630 for the share card. Mission photos are
     // arbitrary sizes, and a wrong declared size makes previews letterbox
     // badly — better to state nothing and let the scraper measure.
     rewriter = rewriter.on('meta[property="og:image:width"], meta[property="og:image:height"]', {
