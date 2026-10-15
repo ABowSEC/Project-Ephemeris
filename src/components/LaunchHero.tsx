@@ -113,21 +113,47 @@ export default function LaunchHero({
  * large heading breaks wherever the first line fills, splitting "Block 5" or
  * a designator at its hyphen. Each half is an inline-block, so a line break
  * falls between them first, and inside one only when it alone is too wide.
+ *
+ * `clamped` is for text under a line clamp (noOfLines): an inline-block is
+ * atomic, so the clamp can't cut inside it and adds lines instead. There only
+ * the rocket half is held together; the mission flows normally and truncates.
  */
-export function LaunchName({ name }: { name: string }) {
+export function LaunchName({ name, clamped = false }: { name: string; clamped?: boolean }) {
   const parts = name.split(' | ');
-  if (parts.length < 2) return <>{name}</>;
+  if (parts.length < 2) return <NoHyphenBreaks text={name} />;
   return (
     <>
       {parts.map((part, i) => (
         <Fragment key={i}>
           {i > 0 && ' '}
-          <Box as="span" display="inline-block">
-            {part}
+          <Box as="span" display={clamped && i === parts.length - 1 ? 'inline' : 'inline-block'}>
+            <NoHyphenBreaks text={part} />
             {i < parts.length - 1 && ' |'}
           </Box>
         </Fragment>
       ))}
+    </>
+  );
+}
+
+/**
+ * Keeps hyphenated words ("USSF-481", "15-15", "Mid-Inclination") whole, so a
+ * line only breaks at a space. A non-breaking hyphen (U+2011) would be
+ * simpler, but Plex has no glyph for it and the fallback font's sits low.
+ * Plain nowrap spans stay inline, so a surrounding line clamp still works.
+ */
+function NoHyphenBreaks({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\S*\w-\w\S*)/).map((piece, i) =>
+        i % 2 ? (
+          <Box as="span" key={i} whiteSpace="nowrap">
+            {piece}
+          </Box>
+        ) : (
+          piece
+        )
+      )}
     </>
   );
 }

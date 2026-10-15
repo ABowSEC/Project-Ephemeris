@@ -22,6 +22,8 @@ import LaunchFilters from './LaunchFilters';
 import AlertSettings from './AlertSettings';
 import { useLaunchFilters } from '../hooks/useLaunchFilters';
 import TrackButton from './TrackButton';
+import ProviderMark from './ProviderMark';
+import { LaunchName } from './LaunchHero';
 import CalendarMenu from './launch/CalendarMenu';
 import ErrorState from './ErrorState';
 import StatusBadge from './StatusBadge';
@@ -37,20 +39,6 @@ const MotionImage = motion(Image);
 // rendering all of them on a phone is a lot of images for a list most people
 // scan the top of.
 const PAGE_SIZE = 12;
-
-const AGENCY_LOGOS: Record<string, string> = {
-  NASA: '/logos/nasa.jpg',
-  SpaceX: '/logos/spacex.jpeg',
-  ULA: '/logos/ula.jpg',
-  ESA: '/logos/esa.jpg',
-  JAXA: '/logos/jaxa.jpg',
-  'Russian Federal Space Agency (ROSCOSMOS)': '/logos/Roscosmos.jpg',
-  'China Aerospace Science and Technology Corporation': '/logos/casc.jpg',
-  'Blue Origin': '/logos/blueorigin.jpg',
-};
-
-const agencyLogo = (agency: string | null) =>
-  (agency && AGENCY_LOGOS[agency]) || '/logos/defaultAgency.jpg';
 
 /**
  * Compact T-minus line for a card, with the date beneath it. Once there is
@@ -165,21 +153,7 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
           align="flex-end"
           zIndex={2}
         >
-          <Box
-            bg="whiteAlpha.900"
-            borderRadius="lg"
-            p={1.5}
-            boxShadow="0 2px 8px rgba(0,0,0,0.4)"
-            flexShrink={0}
-          >
-            <Image
-              src={agencyLogo(provider)}
-              alt=""
-              boxSize="40px"
-              objectFit="contain"
-              fallbackSrc="/logos/defaultAgency.jpg"
-            />
-          </Box>
+          <ProviderMark name={provider} />
           <VStack align="start" spacing={0.5} flex={1} minW={0}>
             <Text
               fontSize="lg"
@@ -189,7 +163,7 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
               noOfLines={2}
               textShadow="0 1px 6px rgba(0,0,0,0.7)"
             >
-              {launch.name}
+              <LaunchName name={launch.name} clamped />
             </Text>
             <Text fontSize="sm" color="whiteAlpha.800" noOfLines={1}>
               {provider ?? 'Unknown provider'}
