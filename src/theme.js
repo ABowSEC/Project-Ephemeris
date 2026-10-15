@@ -116,10 +116,14 @@ const theme = extendTheme({
   colors,
   semanticTokens,
   fonts: {
-    // Orbitron is the brand display face (wordmark + headings); IBM Plex Sans
-    // stays for body copy, where Orbitron's wide geometric forms hurt readability.
-    heading: `'Orbitron', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
+    // IBM Plex Sans for headings and body: mission names run long ("Falcon 9
+    // Block 5 | USSF-481"), and Orbitron's wide geometric forms made them the
+    // loudest thing on every page. Orbitron is kept as `display`, reserved for
+    // the brand: the wordmark, the Home tagline, and short uppercase labels.
+    // Countdowns and technical lines use mono.
+    heading: `'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
     body:    `'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
+    display: `'Orbitron', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif`,
   },
   styles: {
     global: {
@@ -167,6 +171,11 @@ const theme = extendTheme({
   components: {
     Button: {
       defaultProps: { colorScheme: 'brand' },
+    },
+    // Plex at heading sizes reads slightly loose; a touch of negative tracking
+    // tightens it without changing the face
+    Heading: {
+      baseStyle: { fontWeight: '600', letterSpacing: '-0.01em' },
     },
     Input: {
       variants: { outline: { field: controlField } },

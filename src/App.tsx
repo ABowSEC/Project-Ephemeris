@@ -118,6 +118,7 @@ function Navigation() {
             display="flex"
             alignItems="center"
             gap={2}
+            fontFamily="display"
             fontWeight="700"
             fontSize="sm"
             letterSpacing="widest"
@@ -196,6 +197,7 @@ function Navigation() {
             display="flex"
             alignItems="center"
             gap={2}
+            fontFamily="display"
             fontSize="sm"
             letterSpacing="widest"
             textTransform="uppercase"

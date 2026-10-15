@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Box, Flex, HStack, Heading, Text, VStack } from '@chakra-ui/react';
 import { withAlpha } from '../utils/color';
 
@@ -82,8 +82,9 @@ export default function LaunchHero({
             size={{ base: 'xl', md: '2xl' }}
             lineHeight="1.15"
             textAlign={{ base: 'center', lg: 'left' }}
+            sx={{ textWrap: 'balance' }}
           >
-            {heading}
+            {typeof heading === 'string' ? <LaunchName name={heading} /> : heading}
           </Heading>
 
           {metaLine}
@@ -103,5 +104,30 @@ export default function LaunchHero({
         </VStack>
       </Flex>
     </Box>
+  );
+}
+
+/**
+ * A launch name that wraps at its " | " separator. Launch Library names are
+ * "Rocket | Mission" ("Falcon 9 Block 5 | USSF-481"); left to the browser, a
+ * large heading breaks wherever the first line fills, splitting "Block 5" or
+ * a designator at its hyphen. Each half is an inline-block, so a line break
+ * falls between them first, and inside one only when it alone is too wide.
+ */
+export function LaunchName({ name }: { name: string }) {
+  const parts = name.split(' | ');
+  if (parts.length < 2) return <>{name}</>;
+  return (
+    <>
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 && ' '}
+          <Box as="span" display="inline-block">
+            {part}
+            {i < parts.length - 1 && ' |'}
+          </Box>
+        </Fragment>
+      ))}
+    </>
   );
 }

@@ -43,7 +43,7 @@ export default function NextLaunchPanel() {
     >
       <HStack spacing={2}>
         <Box as={FaRocket} color="accent.terminal" boxSize="10px" animation={`${pulseOpacity} 2s ease-in-out infinite`} />
-        <Text fontSize="10px" color="accent.terminal" fontWeight="bold" letterSpacing="0.2em" textTransform="uppercase">
+        <Text fontFamily="display" fontSize="10px" color="accent.terminal" fontWeight="bold" letterSpacing="0.2em" textTransform="uppercase">
           Next Launch
         </Text>
         {next.status?.abbrev && (

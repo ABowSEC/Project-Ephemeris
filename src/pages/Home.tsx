@@ -43,7 +43,9 @@ export default function Home() {
       <Container maxW="7xl">
         <VStack align="stretch" spacing={{ base: 12, md: 16 }}>
           {/* Mission-control hero: brand + copy left, live countdown right */}
-          <Card position="relative" borderRadius="2xl" overflow="hidden" p={{ base: 8, md: 12 }}>
+          {/* Transparent so the starfield runs behind the hero; the hairline
+              border still frames it */}
+          <Card position="relative" bg="transparent" borderRadius="2xl" overflow="hidden" p={{ base: 8, md: 12 }}>
             {/* Emblem watermark: the logo, static (no rotation/reshaping),
                 breathing slowly in place. Screen blend melts its black field
                 into the card, same as the original watermark. Centered while
@@ -64,6 +66,10 @@ export default function Home() {
               draggable={false}
               sx={{
                 animation: prefersReducedMotion ? undefined : `${breathe} 6s ease-in-out infinite`,
+                // With the hero transparent, screen blending no longer hides
+                // the icon's dark square tile against the starfield; a radial
+                // mask feathers it away and leaves only the emblem
+                maskImage: "radial-gradient(closest-side, #000 82%, transparent 100%)",
               }}
             />
 
@@ -81,6 +87,7 @@ export default function Home() {
                 maxW={{ lg: "560px" }}
               >
                 <Text
+                  fontFamily="display"
                   fontSize="10px"
                   color="brand.400"
                   fontWeight="bold"
@@ -90,8 +97,11 @@ export default function Home() {
                   Ephemeris · Mission Control
                 </Text>
 
+                {/* The tagline is the one long-form use of the display face: it
+                    is the brand line, short enough to carry Orbitron */}
                 <Heading
                   as="h1"
+                  fontFamily="display"
                   fontSize="clamp(2rem, 4.5vw, 2.75rem)"
                   fontWeight="700"
                   letterSpacing="-0.02em"

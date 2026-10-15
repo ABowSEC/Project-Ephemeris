@@ -17,7 +17,7 @@ import CountdownDisplay from "../components/launch/CountdownDisplay";
 import StaleDataNotice from "../components/StaleDataNotice";
 import StatusBadge from "../components/StatusBadge";
 import LaunchMetaLine from "../components/LaunchMetaLine";
-import LaunchHero from "../components/LaunchHero";
+import LaunchHero, { LaunchName } from "../components/LaunchHero";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { formatNet, launchPath, providerName, rocketName } from "../utils/launchFields";
@@ -44,6 +44,7 @@ export default function LaunchPage() {
                 animation={`${pulseOpacity} 2s ease-in-out infinite`}
               />
               <Text
+                fontFamily="display"
                 fontSize="10px"
                 color="accent.terminal"
                 fontWeight="bold"
@@ -69,7 +70,7 @@ export default function LaunchPage() {
                 to={launchPath(nextLaunch)}
                 _hover={{ color: "brand.300", textDecoration: "none" }}
               >
-                {nextLaunch.name}
+                <LaunchName name={nextLaunch.name} />
               </Link>
             ) : (
               "No upcoming launches"
