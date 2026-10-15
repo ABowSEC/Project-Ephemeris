@@ -2,9 +2,9 @@ import { Link as RouterLink } from "react-router-dom";
 import { Box, Flex, Heading, HStack, Link, Skeleton, Text, VStack } from "@chakra-ui/react";
 import { ArrowForwardIcon } from "@chakra-ui/icons";
 import { useUpcomingLaunches } from "../../hooks/useUpcomingLaunches";
-import { useCountdown } from "../../hooks/useCountdown";
+import { useLaunchCountdown } from "../../hooks/useCountdown";
 import { hasFlown } from "../../data/launchStatus";
-import { formatNet, launchPath, launchTime, providerName } from "../../utils/launchFields";
+import { formatNet, launchPath, providerName } from "../../utils/launchFields";
 import StatusBadge from "../StatusBadge";
 import type { LaunchListItem } from "../../types/launchLibrary";
 
@@ -12,7 +12,7 @@ import type { LaunchListItem } from "../../types/launchLibrary";
 const COUNT = 4;
 
 function ShortCountdown({ launch }: { launch: LaunchListItem }) {
-  const t = useCountdown(launchTime(launch));
+  const t = useLaunchCountdown(launch);
   if (!t) return null;
   const text = t.d > 0 ? `T-${t.d}d ${t.h}h` : `T-${t.h}h ${String(t.m).padStart(2, "0")}m`;
   return (

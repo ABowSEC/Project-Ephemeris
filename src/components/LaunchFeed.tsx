@@ -25,8 +25,8 @@ import TrackButton from './TrackButton';
 import CalendarMenu from './launch/CalendarMenu';
 import ErrorState from './ErrorState';
 import StatusBadge from './StatusBadge';
-import { formatNet, launchPath, launchTime, providerName } from '../utils/launchFields';
-import { useCountdown } from '../hooks/useCountdown';
+import { formatNet, launchPath, providerName } from '../utils/launchFields';
+import { useLaunchCountdown } from '../hooks/useCountdown';
 import type { LaunchListItem } from '../types/launchLibrary';
 
 const MotionBox = motion(Box);
@@ -58,7 +58,7 @@ const agencyLogo = (agency: string | null) =>
  * detail page.
  */
 function CardTiming({ launch }: { launch: LaunchListItem }) {
-  const countdown = useCountdown(launchTime(launch));
+  const countdown = useLaunchCountdown(launch);
 
   if (!countdown) {
     return (

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { hasPreciseTime, launchTime } from '../utils/launchFields';
+import type { AnyLaunch } from '../types/launchLibrary';
 
 export interface TimeLeft {
   d: number;
@@ -40,4 +42,14 @@ export function useCountdown(targetTime: string | Date | null | undefined): Time
   }, [targetTime]);
 
   return timeLeft;
+}
+
+/**
+ * Countdown to a launch's T-0, or null when the T-0 is too vague to count
+ * down to (a launch pinned only to a day, month, or quarter). Use this rather
+ * than useCountdown(launchTime(launch)) so no readout ticks to the second on
+ * a date the data only knows to the month.
+ */
+export function useLaunchCountdown(launch: AnyLaunch | null | undefined): TimeLeft | null {
+  return useCountdown(hasPreciseTime(launch) ? launchTime(launch) : null);
 }

@@ -2,8 +2,8 @@ import { Link as RouterLink } from "react-router-dom";
 import { Badge, Box, HStack, Spinner, Text, VStack } from "@chakra-ui/react";
 import { FaMapMarkerAlt, FaRocket } from "react-icons/fa";
 import { useUpcomingLaunches } from "../../hooks/useUpcomingLaunches";
-import { useCountdown } from "../../hooks/useCountdown";
-import { launchPath, launchTime } from "../../utils/launchFields";
+import { useLaunchCountdown } from "../../hooks/useCountdown";
+import { formatNet, hasPreciseTime, launchPath } from "../../utils/launchFields";
 import StaleDataNotice from "../StaleDataNotice";
 import { pulseOpacity } from "../../utils/animations";
 
@@ -13,7 +13,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 // launch data so it costs no extra API requests.
 export default function NextLaunchPanel() {
   const { nextLaunch: next, loading, stale, fetchedAt, refresh } = useUpcomingLaunches();
-  const countdown = useCountdown(launchTime(next));
+  const countdown = useLaunchCountdown(next);
 
   if (loading) {
     return (
@@ -70,10 +70,16 @@ export default function NextLaunchPanel() {
           {countdown.d > 0 && `${countdown.d}d `}
           {pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)}
         </Text>
-      ) : (
-        <Badge colorScheme="green" alignSelf="start" rounded="full" px={3}>
-          Launched!
+      ) : hasPreciseTime(next) ? (
+        // nextLaunch is never a flown launch, so a passed T-0 means the window
+        // is open or upstream hasn't recorded a slip yet, not that it launched
+        <Badge colorScheme="orange" alignSelf="start" rounded="full" px={3}>
+          Window open
         </Badge>
+      ) : (
+        <Text fontFamily="mono" fontSize="lg" color="text.secondary">
+          {formatNet(next)}
+        </Text>
       )}
 
       {next.pad?.location?.name && (
