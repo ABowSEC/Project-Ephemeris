@@ -1,4 +1,4 @@
-import { IconButton, Tooltip, useToast } from '@chakra-ui/react';
+import { Box, Button, Tooltip, useToast } from '@chakra-ui/react';
 import { FaBell, FaRegBell } from 'react-icons/fa';
 import { useAlertsEnabled } from '../hooks/useLaunchAlerts';
 
@@ -54,15 +54,23 @@ export default function AlertSettings() {
 
   return (
     <Tooltip label={label} hasArrow>
-      <IconButton
-        aria-label={enabled ? 'Turn off launch alerts' : 'Turn on launch alerts'}
+      {/* A toggle keeps one fixed name and lets aria-pressed carry the
+          state; the visible label drops to icon-only on phones, where the
+          tooltip can't be hovered */}
+      <Button
+        aria-label="Launch alerts"
         aria-pressed={enabled}
-        icon={enabled ? <FaBell /> : <FaRegBell />}
+        leftIcon={enabled ? <FaBell /> : <FaRegBell />}
+        iconSpacing={{ base: 0, sm: 2 }}
         size="sm"
         variant={enabled ? 'solid' : 'outline'}
         colorScheme="orange"
         onClick={() => (enabled ? setEnabled(false) : enableAlerts())}
-      />
+      >
+        <Box as="span" display={{ base: 'none', sm: 'inline' }}>
+          Alerts
+        </Box>
+      </Button>
     </Tooltip>
   );
 }

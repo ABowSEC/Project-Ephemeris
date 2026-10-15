@@ -70,7 +70,7 @@ export default function ComingUpStrip() {
                 key={launch.id}
                 as={RouterLink}
                 to={launchPath(launch)}
-                role="group"
+                data-group
                 align="center"
                 gap={{ base: 3, md: 5 }}
                 py={4}

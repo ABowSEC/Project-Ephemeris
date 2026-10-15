@@ -118,7 +118,7 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
       overflow="hidden"
       shadow="md"
       position="relative"
-      role="group"
+      data-group
       _hover={{
         shadow: '0 12px 32px -12px var(--chakra-colors-blue-500)',
         borderColor: 'blue.400',

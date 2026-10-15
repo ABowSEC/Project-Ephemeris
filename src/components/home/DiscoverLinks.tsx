@@ -34,7 +34,7 @@ export default function DiscoverLinks() {
             key={to}
             as={RouterLink}
             to={to}
-            role="group"
+            data-group
             gap={{ base: 3, md: 6 }}
             py={5}
             px={{ base: 1, md: 2 }}
