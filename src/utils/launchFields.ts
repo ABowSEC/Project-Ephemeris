@@ -160,6 +160,26 @@ export function padCountryCode(launch: AnyLaunch | null | undefined): string | n
   return launch?.pad?.country?.alpha_3_code ?? launch?.pad?.location?.country_code ?? null;
 }
 
+const MINOR_WORDS = new Set(['of', 'and', 'the', 'for', 'de', 'du']);
+
+/**
+ * Provider initials: a short parenthesized abbreviation if there is one
+ * ("CNES"), else initials of the main words ("MHI"), max four letters.
+ */
+export function providerInitials(name: string): string {
+  const paren = name.match(/\(([A-Za-z]{2,5})\)/);
+  if (paren) return paren[1].toUpperCase();
+  const words = name
+    .replace(/\(.*?\)/g, '')
+    .split(/[\s-]+/)
+    .filter((w) => w && !MINOR_WORDS.has(w.toLowerCase()));
+  return words
+    .slice(0, 4)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
+
 /** "Space Launch Complex 40, Cape Canaveral SFS, FL, USA" */
 export function padDescription(launch: AnyLaunch | null | undefined): string | null {
   const parts = [launch?.pad?.name, launch?.pad?.location?.name].filter(Boolean);

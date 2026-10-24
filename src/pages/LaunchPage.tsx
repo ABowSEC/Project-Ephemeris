@@ -34,6 +34,7 @@ export default function LaunchPage() {
         {/* Hero // Next Launch */}
         <LaunchHero
           image={launchImageUrl(nextLaunch)}
+          provider={providerName(nextLaunch)}
           bottomVignette
           eyebrow={
             <>

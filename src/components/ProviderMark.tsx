@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Box, Image, Text } from '@chakra-ui/react';
+import { providerInitials } from '../utils/launchFields';
 
 // Bundled logos, keyed by provider name as the feed spells it. (The feed has
 // no logo URLs.) Anything not listed gets a monogram.
@@ -15,27 +16,7 @@ const LOGOS: Record<string, string> = {
   'Blue Origin': '/logos/blueorigin.jpg',
 };
 
-const MINOR_WORDS = new Set(['of', 'and', 'the', 'for', 'de', 'du']);
-
-/**
- * Provider initials: a short parenthesized abbreviation if there is one
- * ("CNES"), else initials of the main words ("MHI"), max four letters.
- */
-function providerInitials(name: string): string {
-  const paren = name.match(/\(([A-Za-z]{2,5})\)/);
-  if (paren) return paren[1].toUpperCase();
-  const words = name
-    .replace(/\(.*?\)/g, '')
-    .split(/[\s-]+/)
-    .filter((w) => w && !MINOR_WORDS.has(w.toLowerCase()));
-  return words
-    .slice(0, 4)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
-}
-
-/** Provider logo on a white tile, or a monogram tile if we don't have one. */
+/** Provider logo on a white tile, or a one-color monogram tile if we don't have one. */
 export default function ProviderMark({ name, size = 52 }: { name: string | null; size?: number }) {
   const logo = name ? LOGOS[name] : undefined;
   const [failed, setFailed] = useState(false);

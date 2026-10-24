@@ -159,6 +159,7 @@ export default function LaunchDetailPage() {
         {/* Hero */}
         <LaunchHero
           image={launchImageUrl(launch)}
+          provider={provider}
           eyebrow={
             <>
               <StatusBadge status={launch.status} size="sm" />
