@@ -20,7 +20,7 @@ import LaunchMetaLine from "../components/LaunchMetaLine";
 import LaunchHero, { LaunchName } from "../components/LaunchHero";
 import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { usePageMeta } from "../hooks/usePageMeta";
-import { formatNet, launchPath, providerName, rocketName } from "../utils/launchFields";
+import { formatNet, launchImageUrl, launchPath, providerName, rocketName } from "../utils/launchFields";
 import { pulseOpacity } from "../utils/animations";
 
 export default function LaunchPage() {
@@ -33,7 +33,7 @@ export default function LaunchPage() {
 
         {/* Hero // Next Launch */}
         <LaunchHero
-          image={nextLaunch?.image}
+          image={launchImageUrl(nextLaunch)}
           bottomVignette
           eyebrow={
             <>

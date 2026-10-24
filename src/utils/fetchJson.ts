@@ -2,14 +2,16 @@
 // HTTP status codes into user-friendly error messages.
 
 export class ApiError extends Error {
-  constructor(message, status = null) {
+  status: number | null;
+
+  constructor(message: string, status: number | null = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
   }
 }
 
-function messageForStatus(status) {
+function messageForStatus(status: number): string {
   if (status === 403) return 'Access denied. The API key may be invalid or missing.';
   if (status === 404) return 'The requested data was not found.';
   if (status === 429) return 'Rate limit exceeded. Please try again shortly.';
@@ -17,17 +19,21 @@ function messageForStatus(status) {
   return `Request failed (status ${status}).`;
 }
 
+export interface FetchJsonOptions {
+  /** Caller abort (e.g. component unmount) */
+  signal?: AbortSignal;
+  /** Timeout in ms (default 8000) */
+  timeoutMs?: number;
+}
+
 /**
- * Fetch a URL and parse it as JSON, throwing ApiError with a readable
- * message on any failure (bad status, timeout, or network error).
- *
- * @param {string} url
- * @param {Object}      [options]
- * @param {AbortSignal} [options.signal]    Caller abort (e.g. component unmount)
- * @param {number}      [options.timeoutMs] Timeout in ms (default 8000)
- * @returns {Promise<any>} Parsed JSON body
+ * fetchJson, plus the response headers — for callers that need metadata the
+ * body doesn't carry, like the proxy's x-fetched-at.
  */
-export async function fetchJson(url, { signal, timeoutMs = 8000 } = {}) {
+export async function fetchJsonWithHeaders<T = unknown>(
+  url: string,
+  { signal, timeoutMs = 8000 }: FetchJsonOptions = {}
+): Promise<{ data: T; headers: Headers }> {
   const controller = new AbortController();
   const onCallerAbort = () => controller.abort();
   signal?.addEventListener('abort', onCallerAbort);
@@ -36,10 +42,10 @@ export async function fetchJson(url, { signal, timeoutMs = 8000 } = {}) {
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new ApiError(messageForStatus(res.status), res.status);
-    return await res.json();
+    return { data: (await res.json()) as T, headers: res.headers };
   } catch (err) {
     if (err instanceof ApiError) throw err;
-    if (err.name === 'AbortError') {
+    if ((err as Error).name === 'AbortError') {
       // Caller-initiated aborts propagate untouched so callers can ignore
       // them; anything else hitting this path is the timeout firing.
       if (signal?.aborted) throw err;
@@ -50,4 +56,12 @@ export async function fetchJson(url, { signal, timeoutMs = 8000 } = {}) {
     clearTimeout(timeoutId);
     signal?.removeEventListener('abort', onCallerAbort);
   }
+}
+
+/**
+ * Fetch a URL and parse it as JSON, throwing ApiError with a readable
+ * message on any failure (bad status, timeout, or network error).
+ */
+export async function fetchJson<T = unknown>(url: string, options?: FetchJsonOptions): Promise<T> {
+  return (await fetchJsonWithHeaders<T>(url, options)).data;
 }

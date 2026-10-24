@@ -36,10 +36,13 @@ import {
   buildLaunchTitle,
   buildMissionSummary,
   formatNet,
+  infoLinks,
+  launchImageUrl,
   launchPath,
   missionDisplayName,
   padDescription,
   providerName,
+  rocketFamily,
   rocketName,
   weatherProbability,
 } from '../utils/launchFields';
@@ -67,7 +70,7 @@ export default function LaunchDetailPage() {
       ? {
           title: buildLaunchTitle(launch),
           description: buildLaunchDescription(launch),
-          image: launch.image ?? undefined,
+          image: launchImageUrl(launch) ?? undefined,
           url: `/launches/${slug}`,
         }
       : null
@@ -143,7 +146,8 @@ export default function LaunchDetailPage() {
 
   const provider = providerName(launch);
   const rocket = rocketName(launch);
-  const rocketConfig = launch.rocket?.configuration;
+  const family = rocketFamily(launch);
+  const info = infoLinks(launch);
   const pad = padDescription(launch);
   const probability = weatherProbability(launch);
   const displayName = missionDisplayName(launch);
@@ -163,7 +167,7 @@ export default function LaunchDetailPage() {
 
         {/* Hero */}
         <LaunchHero
-          image={launch.image}
+          image={launchImageUrl(launch)}
           eyebrow={
             <>
               <StatusBadge status={launch.status} size="sm" />
@@ -239,15 +243,15 @@ export default function LaunchDetailPage() {
                   Target orbit: <Text as="span" color="text.primary">{launch.mission.orbit.name}</Text>
                 </Text>
               )}
-              {launch.infoURLs && launch.infoURLs.length > 0 && (
+              {info.length > 0 && (
                 <Box mt={4} pt={4} borderTop="1px solid" borderColor="border.default">
                   <Text fontSize="xs" color="text.secondary" mb={2} textTransform="uppercase" letterSpacing="wider">
                     More information
                   </Text>
                   <VStack align="stretch" spacing={1.5}>
-                    {launch.infoURLs.map((info) => (
-                      <Link key={info.url} href={info.url} isExternal fontSize="sm" color="brand.300">
-                        {info.title ?? info.url} <ExternalLinkIcon mx="2px" mb="2px" />
+                    {info.map((link) => (
+                      <Link key={link.url} href={link.url} isExternal fontSize="sm" color="brand.300">
+                        {link.title ?? link.url} <ExternalLinkIcon mx="2px" mb="2px" />
                       </Link>
                     ))}
                   </VStack>
@@ -305,9 +309,9 @@ export default function LaunchDetailPage() {
                     <Heading as="h3" size="sm" mb={2}>
                       {rocket ?? 'Rocket'}
                     </Heading>
-                    {rocketConfig?.family && (
+                    {family && (
                       <Text fontSize="sm" color="text.secondary">
-                        Family: <Text as="span" color="text.primary">{rocketConfig.family}</Text>
+                        Family: <Text as="span" color="text.primary">{family}</Text>
                       </Text>
                     )}
                     {provider && (

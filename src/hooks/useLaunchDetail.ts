@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-// launchStore is JS; allowJs infers its shape from the JSDoc there
 import { getCachedLaunchBySlug, getLaunchBySlug } from '../services/launchStore';
 import { launchDate } from '../utils/launchFields';
 import { hasFlown } from '../data/launchStatus';
