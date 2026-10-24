@@ -1,17 +1,17 @@
 // Normalizers over the Launch Library payload.
 //
-// Two response modes with different field names, several fields that are
-// strings where you'd expect numbers, and a T-0 whose precision varies from
-// "to the second" to "sometime this quarter". Every component that reads a
-// launch used to handle those quirks itself — inconsistently. They are handled
-// here instead, once.
+// Two response modes and two API versions (v2.2.0 payloads linger in caches
+// after the v2.3.0 switch) with different field names and shapes, and a T-0
+// whose precision varies from "to the second" to "sometime this quarter".
+// Every component that reads a launch used to handle those quirks itself —
+// inconsistently. They are handled here instead, once.
 //
 // This file is imported by a Cloudflare Pages Function (functions/launches/
 // [slug].ts) as well as by the browser bundle, so it must stay dependency-free
 // and DOM-free — no `window`/`document`/`localStorage`, no imports beyond
 // types — the same constraint routeMeta.js documents for the same reason.
 
-import type { AnyLaunch, LaunchDetailed, VideoUrl } from '../types/launchLibrary';
+import type { AnyLaunch, InfoUrl, LaunchDetailed, VideoUrl } from '../types/launchLibrary';
 
 /**
  * The moment to count down to.
@@ -85,13 +85,12 @@ export function hasPreciseTime(launch: AnyLaunch | null | undefined): boolean {
 /**
  * All webcast links, best first.
  *
- * `mode=detailed` calls this `vidURLs` while the feed calls it `vid_urls`.
- * Rather than make every caller remember that, both are read here.
+ * v2.2.0's `mode=detailed` called this `vidURLs`; everything else, v2.3.0
+ * detailed included, calls it `vid_urls`. Both are read here.
  */
 export function webcasts(launch: AnyLaunch | null | undefined): VideoUrl[] {
   if (!launch) return [];
-  const detailed = (launch as LaunchDetailed).vidURLs;
-  const list = detailed ?? ('vid_urls' in launch ? launch.vid_urls : null) ?? [];
+  const list = launch.vid_urls ?? (launch as LaunchDetailed).vidURLs ?? [];
   // Upstream ranks with `priority`, ascending
   return [...list].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99));
 }
@@ -145,7 +144,13 @@ export function embeddableVideo(url: string | null | undefined): EmbeddableVideo
 
 // ── Misc ────────────────────────────────────────────────────────────────────
 
-/** Pad coordinates as numbers. LL2 sends them as strings. */
+/** "More information" links: `info_urls` in v2.3.0, `infoURLs` in v2.2.0. */
+export function infoLinks(launch: AnyLaunch | null | undefined): InfoUrl[] {
+  const detailed = launch as LaunchDetailed | null | undefined;
+  return detailed?.info_urls ?? detailed?.infoURLs ?? [];
+}
+
+/** Pad coordinates as numbers. v2.2.0 sent strings, v2.3.0 sends numbers. */
 export function padCoordinates(
   launch: AnyLaunch | null | undefined
 ): { lat: number; lon: number } | null {
@@ -163,6 +168,27 @@ export function rocketName(launch: AnyLaunch | null | undefined): string | null 
 
 export function providerName(launch: AnyLaunch | null | undefined): string | null {
   return launch?.launch_service_provider?.name ?? null;
+}
+
+/** The launch's own image: a bare URL in v2.2.0, an image object in v2.3.0. */
+export function launchImageUrl(launch: AnyLaunch | null | undefined): string | null {
+  const image = launch?.image;
+  if (!image) return null;
+  return typeof image === 'string' ? image : image.image_url || null;
+}
+
+/** "Falcon": `family` in v2.2.0, the first of `families` in v2.3.0. */
+export function rocketFamily(launch: AnyLaunch | null | undefined): string | null {
+  const config = launch?.rocket?.configuration;
+  return config?.families?.[0]?.name ?? config?.family ?? null;
+}
+
+/**
+ * ISO 3166-1 alpha-3 code ("USA") for the pad's country: `pad.country` in
+ * v2.3.0, `pad.location.country_code` in v2.2.0.
+ */
+export function padCountryCode(launch: AnyLaunch | null | undefined): string | null {
+  return launch?.pad?.country?.alpha_3_code ?? launch?.pad?.location?.country_code ?? null;
 }
 
 /** "Space Launch Complex 40, Cape Canaveral SFS, FL, USA" */

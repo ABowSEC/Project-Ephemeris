@@ -8,16 +8,24 @@
 // Stale cache is served as a fallback when the network or rate limit fails,
 // which also gives the PWA offline something to render.
 
-import { ApiError, fetchJson } from '../utils/fetchJson';
+import { ApiError, fetchJsonWithHeaders } from '../utils/fetchJson';
+import type {
+  AnyLaunch,
+  LaunchDetailed,
+  Paginated,
+  UpcomingLaunchesResponse,
+} from '../types/launchLibrary';
 
 // On deployed hosts, launch data comes through our Pages Function proxy
-// (functions/api/launches.js), which caches at the edge so Space Devs sees
+// (functions/api/launches.ts), which caches at the edge so Space Devs sees
 // a handful of requests per hour no matter the visitor count. Local dev
 // and LAN preview have no Functions runtime, so they call the API directly.
 const DEPLOYED_HOSTS = /(\.pages\.dev|ephemeris-online\.com)$/;
 const USES_PROXY = DEPLOYED_HOSTS.test(window.location.hostname);
-const LL2_BASE = 'https://ll.thespacedevs.com/2.2.0';
-const API_URL = USES_PROXY ? '/api/launches' : `${LL2_BASE}/launch/upcoming/?limit=50`;
+const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
+const API_URL = USES_PROXY ? '/api/launches' : `${LL2_BASE}/launches/upcoming/?limit=50`;
+// Still v1 after the v2.3.0 switch, on purpose: a visitor's last good copy is
+// worth keeping through the migration, and launchFields reads both shapes.
 const CACHE_KEY = 'ephemeris.upcomingLaunches.v1';
 // Behind the proxy the edge cache absorbs refetches, so clients can ask
 // every 5 min and catch scrubs and slips quickly. Direct API calls spend
@@ -26,9 +34,26 @@ const CACHE_KEY = 'ephemeris.upcomingLaunches.v1';
 // the same home IP. Countdowns tick locally regardless of data age.
 export const FRESH_MS = (USES_PROXY ? 5 : 15) * 60 * 1000;
 
-let inflight = null;
+interface CacheEntry<T> {
+  fetchedAt: number;
+  data: T;
+}
 
-function readCache() {
+let inflight: Promise<UpcomingLaunchesResponse> | null = null;
+
+/**
+ * When upstream actually produced this data. The proxy says so in
+ * x-fetched-at, which matters when it is serving a stale copy through an
+ * upstream outage: stamping that with the time it reached the browser would
+ * present hours- or days-old data as current. Direct API calls have no such
+ * header, and their data is as fresh as the response.
+ */
+function fetchedAtFrom(headers: Headers): number {
+  const fetchedAt = Number(headers.get('x-fetched-at'));
+  return fetchedAt > 0 ? fetchedAt : Date.now();
+}
+
+function readCache(): CacheEntry<UpcomingLaunchesResponse> | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
@@ -40,9 +65,9 @@ function readCache() {
   }
 }
 
-function writeCache(data) {
+function writeCache(data: UpcomingLaunchesResponse, fetchedAt: number): void {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), data }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ fetchedAt, data }));
   } catch {
     // Storage full or unavailable: caching is best-effort
   }
@@ -52,7 +77,7 @@ function writeCache(data) {
  * Synchronously return the last cached API payload (any age), or null.
  * Useful for consumers that must not trigger a network request.
  */
-export function getCachedLaunches() {
+export function getCachedLaunches(): UpcomingLaunchesResponse | null {
   return readCache()?.data ?? null;
 }
 
@@ -64,28 +89,24 @@ export function getCachedLaunches() {
  * the stale-on-error fallback in getUpcomingLaunches) and nothing else would
  * otherwise reveal that to them.
  */
-export function getUpcomingLaunchesFetchedAt() {
+export function getUpcomingLaunchesFetchedAt(): number | null {
   return readCache()?.fetchedAt ?? null;
 }
 
 /**
  * Get the upcoming-launches API payload, hitting the network only when the
  * cache is older than FRESH_MS. Concurrent callers share one request.
- *
- * @param {Object}  [options]
- * @param {boolean} [options.force] Bypass the freshness check
- * @returns {Promise<any>} The API payload ({ results: [...] })
  */
-export async function getUpcomingLaunches({ force = false } = {}) {
+export async function getUpcomingLaunches({ force = false }: { force?: boolean } = {}): Promise<UpcomingLaunchesResponse> {
   const cached = readCache();
   if (!force && cached && Date.now() - cached.fetchedAt < FRESH_MS) {
     return cached.data;
   }
 
   if (!inflight) {
-    inflight = fetchJson(API_URL, { timeoutMs: 12000 })
-      .then((data) => {
-        writeCache(data);
+    inflight = fetchJsonWithHeaders<UpcomingLaunchesResponse>(API_URL, { timeoutMs: 12000 })
+      .then(({ data, headers }) => {
+        writeCache(data, fetchedAtFrom(headers));
         return data;
       })
       .catch((err) => {
@@ -123,15 +144,15 @@ const DETAIL_KEEP_MS = 7 * 24 * 60 * 60 * 1000;
 
 const TERMINAL_STATUSES = new Set(['Success', 'Failure', 'Partial Failure']);
 
-const detailInflight = new Map();
+const detailInflight = new Map<string, Promise<AnyLaunch>>();
 
-const detailKey = (slug) => `${LAUNCH_KEY_PREFIX}${slug}${LAUNCH_KEY_SUFFIX}`;
+const detailKey = (slug: string) => `${LAUNCH_KEY_PREFIX}${slug}${LAUNCH_KEY_SUFFIX}`;
 
-function detailFreshMs(launch) {
+function detailFreshMs(launch: AnyLaunch): number {
   return TERMINAL_STATUSES.has(launch?.status?.abbrev) ? DETAIL_FLOWN_FRESH_MS : DETAIL_FRESH_MS;
 }
 
-function readDetailCache(slug) {
+function readDetailCache(slug: string): CacheEntry<LaunchDetailed> | null {
   try {
     const raw = localStorage.getItem(detailKey(slug));
     if (!raw) return null;
@@ -142,9 +163,9 @@ function readDetailCache(slug) {
   }
 }
 
-function writeDetailCache(slug, data) {
+function writeDetailCache(slug: string, data: LaunchDetailed, fetchedAt: number): void {
   try {
-    localStorage.setItem(detailKey(slug), JSON.stringify({ fetchedAt: Date.now(), data }));
+    localStorage.setItem(detailKey(slug), JSON.stringify({ fetchedAt, data }));
     pruneDetailCache();
   } catch {
     // Storage full or unavailable: caching is best-effort
@@ -153,13 +174,13 @@ function writeDetailCache(slug, data) {
 
 // Drop long-untouched detail entries. Cheap enough to run on write, and it
 // keeps the number of keys bounded without needing a separate index.
-function pruneDetailCache() {
+function pruneDetailCache(): void {
   const cutoff = Date.now() - DETAIL_KEEP_MS;
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const key = localStorage.key(i);
     if (!key?.startsWith(LAUNCH_KEY_PREFIX)) continue;
     try {
-      const { fetchedAt } = JSON.parse(localStorage.getItem(key)) ?? {};
+      const { fetchedAt } = JSON.parse(localStorage.getItem(key) ?? 'null') ?? {};
       if (!fetchedAt || fetchedAt < cutoff) localStorage.removeItem(key);
     } catch {
       localStorage.removeItem(key);
@@ -175,11 +196,8 @@ function pruneDetailCache() {
  * provider, and T-0 — enough for the detail page to paint immediately when the
  * user clicks through from the list, instead of showing a spinner for data
  * that is already in memory.
- *
- * @param {string} slug
- * @returns {any | null}
  */
-export function getCachedLaunchBySlug(slug) {
+export function getCachedLaunchBySlug(slug: string): AnyLaunch | null {
   const cached = readDetailCache(slug);
   if (cached) return cached.data;
   return getCachedLaunches()?.results?.find((launch) => launch.slug === slug) ?? null;
@@ -188,13 +206,9 @@ export function getCachedLaunchBySlug(slug) {
 /**
  * Get one launch by its Launch Library slug, hitting the network only when the
  * cached copy is stale. Concurrent callers for the same slug share a request.
- *
- * @param {string}  slug
- * @param {Object}  [options]
- * @param {boolean} [options.force] Bypass the freshness check
- * @returns {Promise<any>} The launch object (not the paginated envelope)
+ * Resolves to the launch object (not the paginated envelope).
  */
-export async function getLaunchBySlug(slug, { force = false } = {}) {
+export async function getLaunchBySlug(slug: string, { force = false }: { force?: boolean } = {}): Promise<AnyLaunch> {
   const cached = readDetailCache(slug);
   if (!force && cached && Date.now() - cached.fetchedAt < detailFreshMs(cached.data)) {
     return cached.data;
@@ -205,14 +219,16 @@ export async function getLaunchBySlug(slug, { force = false } = {}) {
     // not, so the two paths converge here rather than at every call site.
     const url = USES_PROXY
       ? `/api/launch/${encodeURIComponent(slug)}`
-      : `${LL2_BASE}/launch/?slug=${encodeURIComponent(slug)}&mode=detailed&limit=1`;
+      : `${LL2_BASE}/launches/?slug=${encodeURIComponent(slug)}&mode=detailed&limit=1`;
 
-    const request = fetchJson(url, { timeoutMs: 12000 })
-      .then((payload) => {
-        const launch = USES_PROXY ? payload : payload?.results?.[0];
+    const request = fetchJsonWithHeaders<LaunchDetailed | Paginated<LaunchDetailed>>(url, { timeoutMs: 12000 })
+      .then(({ data: payload, headers }) => {
+        const launch = USES_PROXY
+          ? (payload as LaunchDetailed)
+          : (payload as Paginated<LaunchDetailed>)?.results?.[0];
         if (!launch?.id) throw new ApiError('That launch could not be found.', 404);
-        writeDetailCache(slug, launch);
-        return launch;
+        writeDetailCache(slug, launch, fetchedAtFrom(headers));
+        return launch as AnyLaunch;
       })
       .catch((err) => {
         // Stale data beats an error page, but a 404 is a real answer: the slug
@@ -234,5 +250,5 @@ export async function getLaunchBySlug(slug, { force = false } = {}) {
     detailInflight.set(slug, request);
   }
 
-  return detailInflight.get(slug);
+  return detailInflight.get(slug)!;
 }

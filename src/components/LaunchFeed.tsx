@@ -27,7 +27,7 @@ import { LaunchName } from './LaunchHero';
 import CalendarMenu from './launch/CalendarMenu';
 import ErrorState from './ErrorState';
 import StatusBadge from './StatusBadge';
-import { formatNet, launchPath, providerName } from '../utils/launchFields';
+import { formatNet, launchImageUrl, launchPath, providerName } from '../utils/launchFields';
 import { useLaunchCountdown } from '../hooks/useCountdown';
 import type { LaunchListItem } from '../types/launchLibrary';
 import { withAlpha } from '../utils/color';
@@ -90,6 +90,7 @@ interface LaunchCardProps {
 
 function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps) {
   const provider = providerName(launch);
+  const image = launchImageUrl(launch);
 
   return (
     <LinkBox
@@ -114,9 +115,9 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
       }}
     >
       <Box position="relative" h={{ base: '190px', md: '210px' }} overflow="hidden">
-        {launch.image ? (
+        {image ? (
           <MotionImage
-            src={launch.image}
+            src={image}
             alt=""
             w="100%"
             h="100%"
@@ -219,7 +220,7 @@ export default function LaunchFeed() {
   }
 
   if (error) {
-    return <ErrorState title="Error loading launches!" message={error} onRetry={refetch} />;
+    return <ErrorState title="Launch schedule temporarily unavailable" message={error} onRetry={refetch} />;
   }
 
   const shown = filters.filtered.slice(0, visible);

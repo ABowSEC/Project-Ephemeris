@@ -71,7 +71,7 @@ function freshSecondsForBody(body: string): number {
  */
 export function launchBySlugOptions(slug: string): Ll2CacheOptions {
   return {
-    upstreamUrl: `${LL2_BASE}/launch/?slug=${encodeURIComponent(slug)}&mode=detailed&limit=1`,
+    upstreamUrl: `${LL2_BASE}/launches/?slug=${encodeURIComponent(slug)}&mode=detailed&limit=1`,
     kvKey: `launch:${slug}`,
     freshSeconds: freshSecondsForBody,
     transform(raw) {
@@ -101,7 +101,7 @@ export function launchBySlugOptions(slug: string): Ll2CacheOptions {
 }
 
 export const upcomingFeedOptions: Ll2CacheOptions = {
-  upstreamUrl: `${LL2_BASE}/launch/upcoming/?limit=50`,
+  upstreamUrl: `${LL2_BASE}/launches/upcoming/?limit=50`,
   kvKey: 'upcoming',
   freshSeconds: UPCOMING_FRESH_SECONDS,
 };

@@ -1,22 +1,41 @@
-// Types for the Launch Library 2 (thespacedevs.com) v2.2.0 API.
+// Types for the Launch Library 2 (thespacedevs.com) v2.3.0 API.
 //
 // Hand-written rather than generated, because the point is to model what the
 // API *actually* returns, not the happy path:
 //
-//   - The two response modes disagree on field names. `mode=detailed` returns
-//     `vidURLs`/`infoURLs`; the default and `mode=list` return `vid_urls`.
-//     Both shapes are modelled here and normalized once, in utils/launchFields.
+//   - v2.2.0 payloads are still in circulation: the edge keeps stale copies for
+//     up to a month and browsers keep their own, and those were cached before
+//     the v2.3.0 switch. Where the two versions disagree (images became
+//     objects, coordinates became numbers, `vidURLs` became `vid_urls`, ...)
+//     both shapes are modelled here and normalized once, in utils/launchFields.
+//     Drop the v2.2.0 halves once those caches have aged out.
 //   - Almost everything is nullable. A launch with no confirmed orbit, no
 //     mission description, no weather probability, or no pad coordinates is
 //     routine, not an error. Optional/`| null` throughout is deliberate.
-//   - Numeric-looking fields are strings. `pad.latitude` and `pad.longitude`
-//     arrive as strings ("28.56194122") and must be parsed before use.
+//   - v2.2.0 sent `pad.latitude`/`pad.longitude` as strings ("28.56194122");
+//     v2.3.0 sends numbers. Go through launchFields.padCoordinates.
 //
 // Only the fields the app reads are declared. Adding one means checking a live
 // response first — see the "Verified API facts" notes in the plan.
 
-/** Latitude/longitude arrive as strings from LL2, not numbers. */
-export type NumericString = string;
+/** Latitude/longitude: strings in v2.2.0, numbers in v2.3.0. */
+export type Coordinate = string | number;
+
+/** v2.3.0's image object. v2.2.0 sent the bare `image_url` string instead. */
+export interface Ll2Image {
+  id?: number;
+  name?: string | null;
+  image_url: string;
+  thumbnail_url?: string | null;
+  credit?: string | null;
+}
+
+export interface Country {
+  id: number;
+  name: string;
+  alpha_2_code?: string | null;
+  alpha_3_code?: string | null;
+}
 
 export interface LaunchStatus {
   id: number;
@@ -42,7 +61,8 @@ export interface NetPrecision {
 export interface Agency {
   id: number;
   name: string;
-  type?: string | null;
+  /** A string in v2.2.0, `{ id, name }` in v2.3.0. */
+  type?: string | { id: number; name: string } | null;
   abbrev?: string | null;
   logo_url?: string | null;
   country_code?: string | null;
@@ -52,7 +72,9 @@ export interface RocketConfiguration {
   id: number;
   name: string;
   full_name?: string;
+  /** v2.2.0 only; v2.3.0 has `families`. Go through launchFields.rocketFamily. */
   family?: string;
+  families?: { id: number; name: string }[] | null;
   variant?: string;
   /** Present in detailed mode; the basis for future /rockets/<slug> routes. */
   url?: string;
@@ -80,6 +102,7 @@ export interface Mission {
 export interface PadLocation {
   id: number;
   name: string;
+  /** v2.2.0 only; v2.3.0 moved it to `pad.country`. See launchFields.padCountryCode. */
   country_code?: string | null;
   map_image?: string | null;
   total_launch_count?: number;
@@ -88,9 +111,10 @@ export interface PadLocation {
 export interface Pad {
   id: number;
   name: string;
-  /** Strings, not numbers. Parse before doing geometry. */
-  latitude?: NumericString | null;
-  longitude?: NumericString | null;
+  /** Go through launchFields.padCoordinates rather than reading these. */
+  latitude?: Coordinate | null;
+  longitude?: Coordinate | null;
+  country?: Country | null;
   map_url?: string | null;
   wiki_url?: string | null;
   info_url?: string | null;
@@ -168,7 +192,8 @@ export interface LaunchBase {
   net_precision?: NetPrecision | null;
   window_start?: string | null;
   window_end?: string | null;
-  image?: string | null;
+  /** Go through launchFields.launchImageUrl rather than reading this. */
+  image?: string | Ll2Image | null;
   last_updated?: string;
   url?: string;
 }
@@ -183,9 +208,11 @@ export interface LaunchDetailed extends LaunchBase {
   mission?: Mission | null;
   pad?: Pad | null;
 
-  /** Detailed mode spells these with capitals. The list mode does not. */
+  /** v2.2.0 detailed mode spelled these with capitals; v2.3.0 does not. */
   vidURLs?: VideoUrl[] | null;
   infoURLs?: InfoUrl[] | null;
+  vid_urls?: VideoUrl[] | null;
+  info_urls?: InfoUrl[] | null;
 
   updates?: LaunchUpdate[] | null;
   program?: Program[] | null;
@@ -195,6 +222,7 @@ export interface LaunchDetailed extends LaunchBase {
   /** Percentage chance of favorable weather, or null/-1 when not assessed. */
   probability?: number | null;
   weather_concerns?: string | null;
+  /** v2.2.0 only. v2.3.0 dropped it; it survives only in cached payloads. */
   holdreason?: string | null;
   failreason?: string | null;
 
@@ -205,10 +233,7 @@ export interface LaunchDetailed extends LaunchBase {
   orbital_launch_attempt_count?: number | null;
 }
 
-/**
- * A launch from the upcoming feed (default mode). Same identity fields, but a
- * shallower payload — and `vid_urls`, not `vidURLs`.
- */
+/** A launch from the upcoming feed (default mode). Same identity fields, but a shallower payload. */
 export interface LaunchListItem extends LaunchBase {
   launch_service_provider?: Agency | null;
   rocket?: Rocket | null;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
@@ -17,10 +17,28 @@ import { usePageMeta } from "../hooks/usePageMeta";
 import TrackButton from "../components/TrackButton";
 import ErrorState from "../components/ErrorState";
 import { StatusDot } from "../components/StatusBadge";
-import { launchPath, launchTime } from "../utils/launchFields";
+import { launchPath, launchTime, padCoordinates, padCountryCode } from "../utils/launchFields";
+import type { LaunchListItem } from "../types/launchLibrary";
 
-function formatShortDate(dateString) {
-  return new Date(dateString).toLocaleDateString("en-US", {
+// LaunchGlobe is JS, and allowJs infers `selectedSite = null` as the type null
+const Globe = LaunchGlobe as ComponentType<{
+  sites: LaunchSite[];
+  onSelectSite: (site: LaunchSite | null) => void;
+  selectedSite?: LaunchSite | null;
+  renderSiteDetails: (site: LaunchSite) => ReactNode;
+}>;
+
+interface LaunchSite {
+  key: string;
+  name: string;
+  countryCode: string | null;
+  lat: number;
+  lng: number;
+  launches: LaunchListItem[];
+}
+
+function formatShortDate(dateString: string | null) {
+  return new Date(dateString ?? 0).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -32,31 +50,31 @@ function formatShortDate(dateString) {
  * Group launches by launch-site location so one marker represents a
  * spaceport (which can have several pads), sorted soonest-first.
  */
-function groupBySite(launches) {
-  const sites = new Map();
+function groupBySite(launches: LaunchListItem[]): LaunchSite[] {
+  const sites = new Map<string, LaunchSite>();
   for (const launch of launches) {
-    const lat = Number.parseFloat(launch.pad?.latitude);
-    const lng = Number.parseFloat(launch.pad?.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    const coordinates = padCoordinates(launch);
+    if (!coordinates) continue;
+    const { lat, lon: lng } = coordinates;
 
     const key = launch.pad?.location?.name ?? `${lat.toFixed(1)},${lng.toFixed(1)}`;
     if (!sites.has(key)) {
       sites.set(key, {
         key,
         name: launch.pad?.location?.name ?? "Unknown site",
-        countryCode: launch.pad?.location?.country_code ?? null,
+        countryCode: padCountryCode(launch),
         lat,
         lng,
         launches: [],
       });
     }
-    sites.get(key).launches.push(launch);
+    sites.get(key)!.launches.push(launch);
   }
 
   const list = [...sites.values()];
   for (const site of list) {
     site.launches.sort(
-      (a, b) => new Date(launchTime(a)) - new Date(launchTime(b))
+      (a, b) => new Date(launchTime(a) ?? 0).getTime() - new Date(launchTime(b) ?? 0).getTime()
     );
   }
   return list;
@@ -64,7 +82,7 @@ function groupBySite(launches) {
 
 // The site name itself is rendered by LaunchGlobe's panel header, which
 // hosts this component — just the count + list here.
-function SitePopup({ site }) {
+function SitePopup({ site }: { site: LaunchSite }) {
   const shown = site.launches.slice(0, 5);
   const extra = site.launches.length - shown.length;
 
@@ -109,7 +127,7 @@ export default function LaunchMapPage() {
   usePageMeta("/map");
   const { launches, loading, error, refetch } = useUpcomingLaunches();
   const sites = useMemo(() => groupBySite(launches), [launches]);
-  const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedSite, setSelectedSite] = useState<LaunchSite | null>(null);
 
   return (
     <Container maxW="8xl" py={8}>
@@ -124,7 +142,7 @@ export default function LaunchMapPage() {
             <Text color="text.secondary">Loading launch sites...</Text>
           </VStack>
         ) : error ? (
-          <ErrorState title="Error loading launches!" message={error} onRetry={refetch} />
+          <ErrorState title="Launch schedule temporarily unavailable" message={error} onRetry={refetch} />
         ) : (
           <>
             <Box
@@ -136,7 +154,7 @@ export default function LaunchMapPage() {
               position="relative"
               h="560px"
             >
-              <LaunchGlobe
+              <Globe
                 sites={sites}
                 onSelectSite={setSelectedSite}
                 selectedSite={selectedSite}

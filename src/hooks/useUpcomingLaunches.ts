@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from 'react';
 import { useApi, type RefetchOptions } from './useApi';
-// launchStore is JS; its payload is cast to the typed response shape here
 import { getUpcomingLaunches, getUpcomingLaunchesFetchedAt, FRESH_MS } from '../services/launchStore';
 import { hasFlown } from '../data/launchStatus';
 import type { LaunchListItem, UpcomingLaunchesResponse } from '../types/launchLibrary';
