@@ -27,14 +27,16 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Launch data (direct API or our /api/launches edge proxy):
-            // prefer fresh, fall back to cache when offline
+            // prefer fresh, fall back to cache when offline. The timeout sits
+            // above the app's own 12s, so a slow-but-successful answer reaches
+            // the app instead of being pre-empted by this cache's older copy.
             urlPattern: ({ url }) =>
               url.hostname === 'll.thespacedevs.com' ||
               (url.origin === self.location.origin && url.pathname === '/api/launches'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'launch-api',
-              networkTimeoutSeconds: 10,
+              networkTimeoutSeconds: 15,
               expiration: { maxEntries: 16, maxAgeSeconds: 60 * 60 },
               cacheableResponse: { statuses: [0, 200] },
             },

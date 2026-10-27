@@ -100,8 +100,22 @@ export function launchBySlugOptions(slug: string): Ll2CacheOptions {
   };
 }
 
+// The feed is refreshed by workers/ll2-refresh every 15 minutes. Past an hour
+// without a new copy (four missed runs), the cron is presumed broken and
+// visitors may fetch it themselves, within their capped share of the budget.
+const FEED_VISITOR_FETCH_AFTER_SECONDS = 60 * 60;
+
 export const upcomingFeedOptions: Ll2CacheOptions = {
   upstreamUrl: `${LL2_BASE}/launches/upcoming/?limit=50`,
   kvKey: 'upcoming',
   freshSeconds: UPCOMING_FRESH_SECONDS,
+  scheduledRefresh: { visitorFetchAfterSeconds: FEED_VISITOR_FETCH_AFTER_SECONDS },
+  // Stored for up to a month and now overwritten on a schedule, so a 200 that
+  // isn't the feed (an HTML error page, a truncated body) must fail the fetch
+  // rather than replace the last good copy.
+  transform(raw) {
+    const parsed = JSON.parse(raw) as { results?: unknown };
+    if (!Array.isArray(parsed.results)) throw new Error('Upcoming feed has no results array');
+    return raw;
+  },
 };
