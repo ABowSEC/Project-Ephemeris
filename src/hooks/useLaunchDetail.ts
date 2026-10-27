@@ -122,6 +122,34 @@ export function useLaunchDetail(slug: string | undefined): LaunchDetailResult {
     };
   }, [slug, launch]);
 
+  // The poll above is throttled or frozen while the tab is hidden, so re-check
+  // as soon as the visitor comes back rather than whenever the next tick fires.
+  // The store returns its cached copy if it checked within the freshness
+  // window, so the extra events cost nothing on a quick tab switch.
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    const revalidate = () => {
+      if (document.visibilityState !== 'visible') return;
+      getLaunchBySlug(slug)
+        .then((result) => {
+          if (!cancelled) setLaunch(result as LaunchDetailed);
+        })
+        .catch(() => {
+          // Background refresh: a failure just means we keep the current copy
+        });
+    };
+    document.addEventListener('visibilitychange', revalidate);
+    window.addEventListener('pageshow', revalidate);
+    window.addEventListener('online', revalidate);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', revalidate);
+      window.removeEventListener('pageshow', revalidate);
+      window.removeEventListener('online', revalidate);
+    };
+  }, [slug]);
+
   return {
     launch,
     loading,

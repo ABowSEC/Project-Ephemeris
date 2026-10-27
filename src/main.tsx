@@ -8,7 +8,20 @@ import App from './App'
 
 // Service worker: precaches the app shell and keeps launch data, map tiles,
 // and images available offline. autoUpdate swaps in new versions silently.
-registerSW({ immediate: true })
+//
+// The browser only checks for a new worker on navigation, and every navigation
+// here is answered from the precache, so a long-lived tab or installed PWA can
+// run an old build for days, fixes included. Checking again whenever the page
+// comes back into view makes a deploy reach returning visitors promptly.
+registerSW({
+  immediate: true,
+  onRegisteredSW(_url, registration) {
+    if (!registration) return
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') registration.update().catch(() => {})
+    })
+  },
+})
 
 // Ephemeris is a dark interface by design — the palette, the map basemap, the
 // star field and the mission-console styling all assume it. There is no light

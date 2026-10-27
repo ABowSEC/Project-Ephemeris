@@ -69,6 +69,15 @@ Launch responses use an edge cache and an optional shared Workers KV namespace, 
 - Optionally bind a Workers KV namespace as `LAUNCHES_CACHE` to share cached launch responses across edge locations.
 - Optionally set `LL2_TOKEN` as a server-side Functions secret for authenticated Launch Library access.
 
+### Scheduled feed refresh
+
+The upcoming-launches feed is refreshed by a separate cron Worker, `workers/ll2-refresh`, every 15 minutes, so visitor requests read it from KV instead of competing for the free tier's 15 calls/hour. Visitors fetch the feed themselves only if the stored copy is more than an hour old. To deploy it:
+
+1. Set `id` in `workers/ll2-refresh/wrangler.toml` to the namespace already bound as `LAUNCHES_CACHE` in the Pages project.
+2. Run `npx wrangler deploy` from `workers/ll2-refresh` (and `npx wrangler secret put LL2_TOKEN` there too, if a token is in use).
+
+`/api/status` reports the feed's age, any active rate-limit cooldown, and the cron's last attempt and result. Test the cron locally with `npx wrangler dev --test-scheduled`, then `curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"`.
+
 Vite development and preview servers do not run Pages Functions. To serve the build alongside the Functions locally:
 
 ```bash
@@ -76,7 +85,7 @@ npm run build
 npx wrangler pages dev dist
 ```
 
-**Local routing caveat:** the frontend currently selects the launch proxy only on `ephemeris-online.com` and `*.pages.dev`. On localhost, including a Wrangler preview, it calls Launch Library directly. Test local Functions through `/api/launches`, `/api/launch/<slug>`, and `/sitemap-launches.xml`. A custom deployment domain requires updating the host check in `src/services/launchStore.js` to use the proxy.
+**Local routing caveat:** the frontend currently selects the launch proxy only on `ephemeris-online.com` and `*.pages.dev`. On localhost, including a Wrangler preview, it calls Launch Library directly. Test local Functions through `/api/launches`, `/api/launch/<slug>`, and `/sitemap-launches.xml`. A custom deployment domain requires updating the host check in `src/services/launchStore.ts` to use the proxy.
 
 ## Stack
 

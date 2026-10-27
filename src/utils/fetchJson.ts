@@ -24,6 +24,8 @@ export interface FetchJsonOptions {
   signal?: AbortSignal;
   /** Timeout in ms (default 8000) */
   timeoutMs?: number;
+  /** HTTP cache mode, e.g. 'no-store' when the user explicitly asks for fresh data */
+  cache?: RequestCache;
 }
 
 /**
@@ -32,7 +34,7 @@ export interface FetchJsonOptions {
  */
 export async function fetchJsonWithHeaders<T = unknown>(
   url: string,
-  { signal, timeoutMs = 8000 }: FetchJsonOptions = {}
+  { signal, timeoutMs = 8000, cache }: FetchJsonOptions = {}
 ): Promise<{ data: T; headers: Headers }> {
   const controller = new AbortController();
   const onCallerAbort = () => controller.abort();
@@ -40,7 +42,7 @@ export async function fetchJsonWithHeaders<T = unknown>(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(url, { signal: controller.signal });
+    const res = await fetch(url, { signal: controller.signal, cache });
     if (!res.ok) throw new ApiError(messageForStatus(res.status), res.status);
     return { data: (await res.json()) as T, headers: res.headers };
   } catch (err) {

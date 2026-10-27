@@ -34,12 +34,61 @@ const CACHE_KEY = 'ephemeris.upcomingLaunches.v1';
 // the same home IP. Countdowns tick locally regardless of data age.
 export const FRESH_MS = (USES_PROXY ? 5 : 15) * 60 * 1000;
 
-interface CacheEntry<T> {
+export interface CacheEntry<T> {
+  /** When upstream produced the data: what "how old is this" is judged by. */
   fetchedAt: number;
+  /**
+   * When this browser last got an answer. Freshness (whether to ask again) is
+   * judged by this, not fetchedAt: the edge serves copies up to ~20 min old by
+   * design, and judging by their upstream age would make every check refetch.
+   * Absent on entries written before it existed.
+   */
+  checkedAt?: number;
   data: T;
 }
 
+const lastChecked = (entry: CacheEntry<unknown>) => entry.checkedAt ?? entry.fetchedAt;
+
 let inflight: Promise<UpcomingLaunchesResponse> | null = null;
+
+// ── Subscriptions ────────────────────────────────────────────────────────────
+//
+// Every component showing launches (nav countdown, hero, feed, map, strip)
+// used to hold its own copy in useApi state, so a refresh one of them made
+// reached the others only on their own next timer tick, and a returning
+// visitor could see two different "next launches" at once. They now read one
+// snapshot through useSyncExternalStore, and every write notifies them all,
+// including writes from other tabs via the storage event.
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+// undefined = not read yet; null = read, nothing cached
+let snapshot: CacheEntry<UpcomingLaunchesResponse> | null | undefined;
+
+function notify(): void {
+  listeners.forEach((listener) => listener());
+}
+
+export function subscribeUpcomingLaunches(listener: Listener): () => void {
+  if (listeners.size === 0) window.addEventListener('storage', onStorage);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) window.removeEventListener('storage', onStorage);
+  };
+}
+
+function onStorage(event: StorageEvent): void {
+  if (event.key !== CACHE_KEY) return;
+  snapshot = readCache();
+  notify();
+}
+
+/** Stable between writes, as useSyncExternalStore requires. */
+export function getUpcomingLaunchesSnapshot(): CacheEntry<UpcomingLaunchesResponse> | null {
+  if (snapshot === undefined) snapshot = readCache();
+  return snapshot;
+}
 
 /**
  * When upstream actually produced this data. The proxy says so in
@@ -66,11 +115,15 @@ function readCache(): CacheEntry<UpcomingLaunchesResponse> | null {
 }
 
 function writeCache(data: UpcomingLaunchesResponse, fetchedAt: number): void {
+  const entry = { fetchedAt, checkedAt: Date.now(), data };
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ fetchedAt, data }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch {
     // Storage full or unavailable: caching is best-effort
   }
+  // Subscribers get the new data even when storage refused it
+  snapshot = entry;
+  notify();
 }
 
 /**
@@ -78,7 +131,7 @@ function writeCache(data: UpcomingLaunchesResponse, fetchedAt: number): void {
  * Useful for consumers that must not trigger a network request.
  */
 export function getCachedLaunches(): UpcomingLaunchesResponse | null {
-  return readCache()?.data ?? null;
+  return getUpcomingLaunchesSnapshot()?.data ?? null;
 }
 
 /**
@@ -90,21 +143,26 @@ export function getCachedLaunches(): UpcomingLaunchesResponse | null {
  * otherwise reveal that to them.
  */
 export function getUpcomingLaunchesFetchedAt(): number | null {
-  return readCache()?.fetchedAt ?? null;
+  return getUpcomingLaunchesSnapshot()?.fetchedAt ?? null;
 }
 
 /**
- * Get the upcoming-launches API payload, hitting the network only when the
- * cache is older than FRESH_MS. Concurrent callers share one request.
+ * Get the upcoming-launches API payload, hitting the network only when this
+ * browser last checked more than FRESH_MS ago. Concurrent callers share one
+ * request. `force` also bypasses the browser's HTTP cache, so a manual refresh
+ * really reaches the proxy.
  */
 export async function getUpcomingLaunches({ force = false }: { force?: boolean } = {}): Promise<UpcomingLaunchesResponse> {
-  const cached = readCache();
-  if (!force && cached && Date.now() - cached.fetchedAt < FRESH_MS) {
+  const cached = getUpcomingLaunchesSnapshot();
+  if (!force && cached && Date.now() - lastChecked(cached) < FRESH_MS) {
     return cached.data;
   }
 
   if (!inflight) {
-    inflight = fetchJsonWithHeaders<UpcomingLaunchesResponse>(API_URL, { timeoutMs: 12000 })
+    inflight = fetchJsonWithHeaders<UpcomingLaunchesResponse>(API_URL, {
+      timeoutMs: 12000,
+      cache: force ? 'no-store' : 'default',
+    })
       .then(({ data, headers }) => {
         writeCache(data, fetchedAtFrom(headers));
         return data;
@@ -135,21 +193,32 @@ const LAUNCH_KEY_SUFFIX = '.v1';
 
 // A launch that has flown is a historical record and will not change again, so
 // it can sit in cache for hours; one that is still upcoming can slip at any
-// time. These mirror the TTLs the edge function uses.
+// time. The flown TTL mirrors the edge's; the upcoming one is shorter than the
+// edge's 20 min on purpose, so a scrub the edge has already picked up reaches
+// an open detail page within minutes rather than after a second 20 min wait.
 const DETAIL_FRESH_MS = 5 * 60 * 1000;
 const DETAIL_FLOWN_FRESH_MS = 6 * 60 * 60 * 1000;
 // Entries this old are dropped on the next write, so browsing a lot of
 // launches can't slowly fill localStorage.
 const DETAIL_KEEP_MS = 7 * 24 * 60 * 60 * 1000;
 
-const TERMINAL_STATUSES = new Set(['Success', 'Failure', 'Partial Failure']);
+// Same set as functions/_shared/launchLookup.ts, which also matches on name
+const TERMINAL_STATUSES = new Set([
+  'Success',
+  'Failure',
+  'Partial Failure',
+  'Launch Successful',
+  'Launch Failure',
+]);
 
 const detailInflight = new Map<string, Promise<AnyLaunch>>();
 
 const detailKey = (slug: string) => `${LAUNCH_KEY_PREFIX}${slug}${LAUNCH_KEY_SUFFIX}`;
 
 function detailFreshMs(launch: AnyLaunch): number {
-  return TERMINAL_STATUSES.has(launch?.status?.abbrev) ? DETAIL_FLOWN_FRESH_MS : DETAIL_FRESH_MS;
+  const terminal =
+    TERMINAL_STATUSES.has(launch?.status?.abbrev) || TERMINAL_STATUSES.has(launch?.status?.name);
+  return terminal ? DETAIL_FLOWN_FRESH_MS : DETAIL_FRESH_MS;
 }
 
 function readDetailCache(slug: string): CacheEntry<LaunchDetailed> | null {
@@ -165,7 +234,7 @@ function readDetailCache(slug: string): CacheEntry<LaunchDetailed> | null {
 
 function writeDetailCache(slug: string, data: LaunchDetailed, fetchedAt: number): void {
   try {
-    localStorage.setItem(detailKey(slug), JSON.stringify({ fetchedAt, data }));
+    localStorage.setItem(detailKey(slug), JSON.stringify({ fetchedAt, checkedAt: Date.now(), data }));
     pruneDetailCache();
   } catch {
     // Storage full or unavailable: caching is best-effort
@@ -210,7 +279,7 @@ export function getCachedLaunchBySlug(slug: string): AnyLaunch | null {
  */
 export async function getLaunchBySlug(slug: string, { force = false }: { force?: boolean } = {}): Promise<AnyLaunch> {
   const cached = readDetailCache(slug);
-  if (!force && cached && Date.now() - cached.fetchedAt < detailFreshMs(cached.data)) {
+  if (!force && cached && Date.now() - lastChecked(cached) < detailFreshMs(cached.data)) {
     return cached.data;
   }
 
@@ -221,7 +290,10 @@ export async function getLaunchBySlug(slug: string, { force = false }: { force?:
       ? `/api/launch/${encodeURIComponent(slug)}`
       : `${LL2_BASE}/launches/?slug=${encodeURIComponent(slug)}&mode=detailed&limit=1`;
 
-    const request = fetchJsonWithHeaders<LaunchDetailed | Paginated<LaunchDetailed>>(url, { timeoutMs: 12000 })
+    const request = fetchJsonWithHeaders<LaunchDetailed | Paginated<LaunchDetailed>>(url, {
+      timeoutMs: 12000,
+      cache: force ? 'no-store' : 'default',
+    })
       .then(({ data: payload, headers }) => {
         const launch = USES_PROXY
           ? (payload as LaunchDetailed)

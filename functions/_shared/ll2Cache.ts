@@ -77,6 +77,18 @@ export class UpstreamError extends Error {
   }
 }
 
+/**
+ * Our own cap on visitor-triggered calls was reached. Behaves like a 429 to
+ * callers (stale copy, else 503 with Retry-After), but upstream never refused
+ * anything, so it must not start the shared cooldown.
+ */
+export class VisitorBudgetError extends UpstreamError {
+  constructor(retryAfterSeconds: number) {
+    super(429, retryAfterSeconds);
+    this.name = 'VisitorBudgetError';
+  }
+}
+
 /** Retry-After is either delta-seconds or an HTTP date. */
 function parseRetryAfter(value: string | null): number | null {
   if (!value) return null;
@@ -86,7 +98,7 @@ function parseRetryAfter(value: string | null): number | null {
   return Number.isNaN(date) ? null : Math.max(0, (date - Date.now()) / 1000);
 }
 
-async function readCooldown(kv: KVNamespace | undefined): Promise<number> {
+export async function readCooldown(kv: KVNamespace | undefined): Promise<number> {
   if (isolateCooldownUntil > Date.now()) return isolateCooldownUntil;
   if (!kv) return 0;
   try {
@@ -98,20 +110,64 @@ async function readCooldown(kv: KVNamespace | undefined): Promise<number> {
   }
 }
 
-function startCooldown(context: Ll2Context, retryAfterSeconds: number | null): number {
+function startCooldown(runtime: Ll2Runtime, retryAfterSeconds: number | null): number {
   const seconds = Math.min(
     COOLDOWN_MAX_SECONDS,
     Math.max(COOLDOWN_MIN_SECONDS, retryAfterSeconds ?? COOLDOWN_DEFAULT_SECONDS)
   );
   const until = Date.now() + seconds * 1000;
   isolateCooldownUntil = until;
-  const kv = context.env.LAUNCHES_CACHE;
+  const kv = runtime.env.LAUNCHES_CACHE;
   if (kv) {
-    context.waitUntil(
+    runtime.waitUntil(
       kv.put(COOLDOWN_KV_KEY, String(until), { expirationTtl: Math.ceil(seconds) }).catch(() => {})
     );
   }
   return until;
+}
+
+// A fresh 429 (not one we synthesized from an active cooldown, which carries
+// the time remaining) starts the shared cooldown. Returns the error to
+// propagate, re-labeled with the cooldown's length so a 503 says when to come
+// back even when upstream didn't.
+function noteRejection(runtime: Ll2Runtime, err: unknown): unknown {
+  if (
+    err instanceof UpstreamError &&
+    !(err instanceof VisitorBudgetError) &&
+    err.status === 429 &&
+    isolateCooldownUntil <= Date.now()
+  ) {
+    const until = startCooldown(runtime, err.retryAfterSeconds);
+    console.error(`LL2 rate limited; cooldown until ${new Date(until).toISOString()}`);
+    return new UpstreamError(429, (until - Date.now()) / 1000);
+  }
+  return err;
+}
+
+// Visitor-triggered upstream calls get a fixed share of the hourly budget, so
+// the scheduled feed refresh (workers/ll2-refresh) always has room. Without a
+// cap, a crawler walking uncached /launches/<slug> pages spent all 15 calls,
+// the feed refresh drew 429 after 429, and the site served a days-old schedule.
+// The counter is approximate — KV is eventually consistent and the
+// read-increment races — which is fine for a budget with this much headroom.
+const VISITOR_CALLS_PER_HOUR = 8;
+const VISITOR_BUDGET_KEY_PREFIX = 'll2:visitor-calls:';
+
+async function spendVisitorBudget(runtime: Ll2Runtime): Promise<void> {
+  const kv = runtime.env.LAUNCHES_CACHE;
+  if (!kv) return;
+  const hour = Math.floor(Date.now() / 3_600_000);
+  const key = `${VISITOR_BUDGET_KEY_PREFIX}${hour}`;
+  let used = 0;
+  try {
+    used = Number(await kv.get(key)) || 0;
+  } catch {
+    // Unreadable counter: let the call through rather than lock visitors out
+  }
+  if (used >= VISITOR_CALLS_PER_HOUR) {
+    throw new VisitorBudgetError((hour + 1) * 3600 - Date.now() / 1000);
+  }
+  runtime.waitUntil(kv.put(key, String(used + 1), { expirationTtl: 2 * 3600 }).catch(() => {}));
 }
 
 // Marks a negative cache entry. Stored as a real cache entry so a crawler
@@ -161,6 +217,13 @@ export interface Ll2CacheOptions {
    * under duress, and caching it would keep the real one from ever landing.
    */
   fallback?: (context: Ll2Context) => Promise<string | null>;
+  /**
+   * Set when workers/ll2-refresh keeps this resource current on a schedule.
+   * Visitors then serve whatever KV holds, however stale past freshSeconds,
+   * and only go upstream themselves when the stored copy is older than this —
+   * a safety net for a cron that has stopped running, not the normal path.
+   */
+  scheduledRefresh?: { visitorFetchAfterSeconds: number };
 }
 
 interface Cached {
@@ -215,17 +278,60 @@ async function kvRead(kv: KVNamespace | undefined, key: string): Promise<Cached 
   }
 }
 
-function kvWrite(context: Ll2Context, key: string, body: string, ttlSeconds: number): void {
-  const kv = context.env.LAUNCHES_CACHE;
+function kvWrite(
+  runtime: Ll2Runtime,
+  key: string,
+  body: string,
+  ttlSeconds: number,
+  fetchedAt: number
+): void {
+  const kv = runtime.env.LAUNCHES_CACHE;
   if (!kv) return;
   // expirationTtl mirrors L1's KEEP window: stale-on-error stock, then evict.
   // KV rejects TTLs under 60s, so floor it rather than lose the write.
-  context.waitUntil(
+  runtime.waitUntil(
     kv.put(key, body, {
-      metadata: { fetchedAt: Date.now() },
+      metadata: { fetchedAt },
       expirationTtl: Math.max(60, ttlSeconds),
     })
   );
+}
+
+// Fetch upstream, apply the transform, and write the result to KV. Shared by
+// the visitor path (resolveCached) and the scheduled refresh (refreshToKv) so
+// both store exactly the same shape under exactly the same key.
+async function fetchAndStore(
+  runtime: Ll2Runtime,
+  options: Ll2CacheOptions
+): Promise<{ body: string; fetchedAt: number; ttl: number }> {
+  const {
+    upstreamUrl,
+    kvKey,
+    keepSeconds = DEFAULT_KEEP_SECONDS,
+    transform,
+    notFoundSeconds = 120,
+  } = options;
+
+  const headers: Record<string, string> = { accept: 'application/json' };
+  if (runtime.env.LL2_TOKEN) headers.authorization = `Token ${runtime.env.LL2_TOKEN}`;
+
+  const raw = await fetchUpstream(upstreamUrl, headers);
+  const fetchedAt = Date.now();
+
+  let body: string;
+  let ttl = keepSeconds;
+  try {
+    body = transform ? transform(raw) : raw;
+  } catch (err) {
+    if (!(err instanceof NotFoundError)) throw err;
+    // Store the negative result so repeat lookups of a bad slug never reach
+    // upstream again for a while.
+    body = NOT_FOUND_MARKER;
+    ttl = notFoundSeconds;
+  }
+
+  kvWrite(runtime, kvKey, body, ttl, fetchedAt);
+  return { body, fetchedAt, ttl };
 }
 
 // Build the cacheable Response. Long max-age keeps the entry alive in the edge
@@ -242,16 +348,39 @@ function storeResponse(body: string, fetchedAt: number, keepSeconds: number): Re
 
 function isFresh(cached: Cached, freshSeconds: Ll2CacheOptions['freshSeconds']): boolean {
   const limit = typeof freshSeconds === 'function' ? freshSeconds(cached.body) : freshSeconds;
-  return (Date.now() - cached.fetchedAt) / 1000 < limit;
+  return isYoungerThan(cached, limit);
 }
 
-export interface Ll2Env {
+function isYoungerThan(cached: Cached, seconds: number): boolean {
+  return (Date.now() - cached.fetchedAt) / 1000 < seconds;
+}
+
+// With a scheduled refresher, L1 only bridges KV reads for a busy PoP. Kept
+// short so every PoP picks up the cron's write within a couple of minutes;
+// KV, not L1, holds the stale-on-error stock for these resources.
+const SCHEDULED_L1_SECONDS = 120;
+
+/** The bindings the cache needs: shared by Pages Functions and the cron Worker. */
+export interface Ll2Bindings {
   LAUNCHES_CACHE?: KVNamespace;
   LL2_TOKEN?: string;
+}
+
+export interface Ll2Env extends Ll2Bindings {
   ASSETS: Fetcher;
 }
 
 export type Ll2Context = EventContext<Ll2Env, string, unknown>;
+
+/**
+ * The part of a request or scheduled-event context that fetching and storing
+ * need. A Pages EventContext satisfies it, and so does a cron handler's
+ * { env, waitUntil }.
+ */
+export interface Ll2Runtime {
+  env: Ll2Bindings;
+  waitUntil(promise: Promise<unknown>): void;
+}
 
 /**
  * Resolve a body through both cache tiers, fetching upstream when neither is
@@ -270,14 +399,19 @@ export async function resolveCached(
     kvKey,
     freshSeconds,
     keepSeconds = DEFAULT_KEEP_SECONDS,
-    transform,
-    notFoundSeconds = 120,
     fallback,
+    scheduledRefresh,
   } = options;
 
   const cache = caches.default;
   // Fixed cache key: client query strings must not fragment the cache
   const cacheKey = new Request(upstreamUrl);
+  const l1Seconds = scheduledRefresh ? SCHEDULED_L1_SECONDS : keepSeconds;
+  // A cron-refreshed copy is served past freshSeconds without asking upstream:
+  // the cron will replace it, and a visitor asking too would only compete with
+  // it for the same budget.
+  const servable = (cached: Cached) =>
+    scheduledRefresh != null && isYoungerThan(cached, scheduledRefresh.visitorFetchAfterSeconds);
 
   const check = (body: string) => {
     if (body === NOT_FOUND_MARKER) throw new NotFoundError();
@@ -292,15 +426,19 @@ export async function resolveCached(
   if (l1 && isFresh(l1, freshSeconds)) {
     return { body: check(l1.body), status: 'HIT', fetchedAt: l1.fetchedAt };
   }
+  if (l1 && servable(l1)) {
+    return { body: check(l1.body), status: 'STALE', fetchedAt: l1.fetchedAt };
+  }
 
-  // L2: another PoP may have refreshed the global copy while this one went
-  // stale — serve that instead of spending an upstream call, and warm L1.
+  // L2: another PoP (or the cron) may have refreshed the global copy while this
+  // one went stale — serve that instead of spending an upstream call, and warm L1.
   const kvCopy = await kvRead(context.env.LAUNCHES_CACHE, kvKey);
-  if (kvCopy && isFresh(kvCopy, freshSeconds)) {
+  if (kvCopy && (isFresh(kvCopy, freshSeconds) || servable(kvCopy))) {
     context.waitUntil(
-      cache.put(cacheKey, storeResponse(kvCopy.body, kvCopy.fetchedAt, keepSeconds))
+      cache.put(cacheKey, storeResponse(kvCopy.body, kvCopy.fetchedAt, l1Seconds))
     );
-    return { body: check(kvCopy.body), status: 'KV-HIT', fetchedAt: kvCopy.fetchedAt };
+    const status = isFresh(kvCopy, freshSeconds) ? 'KV-HIT' : 'KV-STALE';
+    return { body: check(kvCopy.body), status, fetchedAt: kvCopy.fetchedAt };
   }
 
   try {
@@ -308,40 +446,16 @@ export async function resolveCached(
     if (cooldownUntil > Date.now()) {
       throw new UpstreamError(429, (cooldownUntil - Date.now()) / 1000);
     }
+    await spendVisitorBudget(context);
 
-    const headers: Record<string, string> = { accept: 'application/json' };
-    if (context.env.LL2_TOKEN) headers.authorization = `Token ${context.env.LL2_TOKEN}`;
-
-    const raw = await fetchUpstream(upstreamUrl, headers);
-    const now = Date.now();
-
-    let body: string;
-    let ttl = keepSeconds;
-    try {
-      body = transform ? transform(raw) : raw;
-    } catch (err) {
-      if (!(err instanceof NotFoundError)) throw err;
-      // Store the negative result so repeat lookups of a bad slug never reach
-      // upstream again for a while.
-      body = NOT_FOUND_MARKER;
-      ttl = notFoundSeconds;
-    }
-
-    context.waitUntil(cache.put(cacheKey, storeResponse(body, now, ttl)));
-    kvWrite(context, kvKey, body, ttl);
-    return { body: check(body), status: 'MISS', fetchedAt: now };
+    const { body, fetchedAt, ttl } = await fetchAndStore(context, options);
+    context.waitUntil(
+      cache.put(cacheKey, storeResponse(body, fetchedAt, Math.min(ttl, l1Seconds)))
+    );
+    return { body: check(body), status: 'MISS', fetchedAt };
   } catch (caught) {
     if (caught instanceof NotFoundError) throw caught;
-    let err = caught;
-    // A fresh 429 (not one we synthesized from an active cooldown, which
-    // carries the time remaining) starts the shared cooldown. Rethrow with
-    // the cooldown's length so a 503 says when to come back even when
-    // upstream didn't.
-    if (err instanceof UpstreamError && err.status === 429 && isolateCooldownUntil <= Date.now()) {
-      const until = startCooldown(context, err.retryAfterSeconds);
-      console.error(`LL2 rate limited; cooldown until ${new Date(until).toISOString()}`);
-      err = new UpstreamError(429, (until - Date.now()) / 1000);
-    }
+    const err = noteRejection(context, caught);
     // Stale-on-error: prefer this PoP's copy, then the global one, then a
     // lesser copy from elsewhere, then fail.
     if (l1) return { body: check(l1.body), status: 'STALE', fetchedAt: l1.fetchedAt };
@@ -412,4 +526,88 @@ export async function serveCached(
       { status: 503, headers }
     );
   }
+}
+
+// ── Scheduled refresh ────────────────────────────────────────────────────────
+//
+// workers/ll2-refresh calls refreshToKv on a cron so the feed no longer waits
+// for a visitor to find it stale. Its outcome is recorded under STATUS_KV_KEY,
+// which /api/status serves: the one place that says whether refreshes are
+// landing, without digging through Cloudflare's real-time logs.
+
+const STATUS_KV_KEY = 'll2:status';
+
+export interface RefreshStatus {
+  lastAttemptAt: number;
+  lastSuccessAt: number | null;
+  /** 'ok', 'skipped', or the upstream status / error name that failed it. */
+  lastResult: string;
+  lastError: string | null;
+  /** Upstream's Retry-After from the last refusal; the cron waits it out. */
+  retryAt: number | null;
+}
+
+export async function readRefreshStatus(kv: KVNamespace | undefined): Promise<RefreshStatus | null> {
+  if (!kv) return null;
+  try {
+    return await kv.get<RefreshStatus>(STATUS_KV_KEY, 'json');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Refresh one resource into KV, for a scheduled caller.
+ *
+ * Deliberately ignores the shared cooldown. A cooldown is restarted by any
+ * endpoint's 429, so a steady trickle of detail lookups could keep it alive
+ * indefinitely and starve the feed, which is how the schedule froze for days.
+ * The cron's few calls an hour are the budget's first claim; it holds back
+ * only for a Retry-After that upstream gave the cron itself, or when a copy is
+ * already fresh enough that the call would buy nothing.
+ */
+export async function refreshToKv(
+  runtime: Ll2Runtime,
+  options: Ll2CacheOptions,
+  { skipIfYoungerThanSeconds = 0 }: { skipIfYoungerThanSeconds?: number } = {}
+): Promise<RefreshStatus> {
+  const kv = runtime.env.LAUNCHES_CACHE;
+  const previous = await readRefreshStatus(kv);
+  const now = Date.now();
+  const status: RefreshStatus = {
+    lastAttemptAt: now,
+    lastSuccessAt: previous?.lastSuccessAt ?? null,
+    lastResult: 'skipped',
+    lastError: null,
+    retryAt: previous?.retryAt ?? null,
+  };
+
+  const existing = await kvRead(kv, options.kvKey);
+  if (status.retryAt && status.retryAt > now) {
+    status.lastError = `waiting out Retry-After until ${new Date(status.retryAt).toISOString()}`;
+  } else if (existing && isYoungerThan(existing, skipIfYoungerThanSeconds)) {
+    status.lastError = 'stored copy is still fresh';
+  } else {
+    try {
+      const { fetchedAt } = await fetchAndStore(runtime, options);
+      status.lastResult = 'ok';
+      status.lastSuccessAt = fetchedAt;
+      status.retryAt = null;
+    } catch (err) {
+      const upstreamStatus = err instanceof UpstreamError ? err.status : null;
+      status.lastResult = upstreamStatus ? String(upstreamStatus) : (err as Error)?.name || 'error';
+      status.lastError = (err as Error)?.message ?? String(err);
+      if (err instanceof UpstreamError && err.status === 429) {
+        // Tell visitor endpoints too: while upstream is refusing, their calls
+        // would only extend the refusal.
+        const until = startCooldown(runtime, err.retryAfterSeconds);
+        status.retryAt = err.retryAfterSeconds != null ? until : null;
+      }
+    }
+  }
+
+  // Awaited, not waitUntil: the next run's Retry-After check depends on this
+  // having landed, and a cron has no visitor waiting on its latency.
+  if (kv) await kv.put(STATUS_KV_KEY, JSON.stringify(status)).catch(() => {});
+  return status;
 }
