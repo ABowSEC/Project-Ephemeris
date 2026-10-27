@@ -144,10 +144,9 @@ function noteRejection(runtime: Ll2Runtime, err: unknown): unknown {
   return err;
 }
 
-// Visitor-triggered upstream calls get a fixed share of the hourly budget, so
-// the scheduled feed refresh (workers/ll2-refresh) always has room. Without a
-// cap, a crawler walking uncached /launches/<slug> pages spent all 15 calls,
-// the feed refresh drew 429 after 429, and the site served a days-old schedule.
+// Visitor-triggered upstream calls are capped per hour. Without a cap, a
+// crawler walking uncached /launches/<slug> pages spent the whole 15/hour
+// budget, and every further call only drew another 429 and prolonged it.
 // The counter is approximate — KV is eventually consistent and the
 // read-increment races — which is fine for a budget with this much headroom.
 const VISITOR_CALLS_PER_HOUR = 8;
@@ -218,10 +217,11 @@ export interface Ll2CacheOptions {
    */
   fallback?: (context: Ll2Context) => Promise<string | null>;
   /**
-   * Set when workers/ll2-refresh keeps this resource current on a schedule.
-   * Visitors then serve whatever KV holds, however stale past freshSeconds,
-   * and only go upstream themselves when the stored copy is older than this —
-   * a safety net for a cron that has stopped running, not the normal path.
+   * Set when scripts/refresh-launches.ts keeps this resource current on a
+   * schedule. Visitors then serve whatever KV holds, however stale past
+   * freshSeconds, and only go upstream themselves when the stored copy is
+   * older than this — a safety net for a refresher that has stopped landing,
+   * not the normal path.
    */
   scheduledRefresh?: { visitorFetchAfterSeconds: number };
 }
@@ -297,9 +297,9 @@ function kvWrite(
   );
 }
 
-// Fetch upstream, apply the transform, and write the result to KV. Shared by
-// the visitor path (resolveCached) and the scheduled refresh (refreshToKv) so
-// both store exactly the same shape under exactly the same key.
+// Fetch upstream, apply the transform, and write the result to KV, in the
+// shape scripts/refresh-launches.ts also writes: body as the value, fetchedAt
+// in metadata.
 async function fetchAndStore(
   runtime: Ll2Runtime,
   options: Ll2CacheOptions
@@ -360,7 +360,7 @@ function isYoungerThan(cached: Cached, seconds: number): boolean {
 // KV, not L1, holds the stale-on-error stock for these resources.
 const SCHEDULED_L1_SECONDS = 120;
 
-/** The bindings the cache needs: shared by Pages Functions and the cron Worker. */
+/** The bindings fetching and storing need. */
 export interface Ll2Bindings {
   LAUNCHES_CACHE?: KVNamespace;
   LL2_TOKEN?: string;
@@ -373,9 +373,8 @@ export interface Ll2Env extends Ll2Bindings {
 export type Ll2Context = EventContext<Ll2Env, string, unknown>;
 
 /**
- * The part of a request or scheduled-event context that fetching and storing
- * need. A Pages EventContext satisfies it, and so does a cron handler's
- * { env, waitUntil }.
+ * The part of a Pages EventContext that fetching and storing need, so those
+ * helpers don't depend on the request-specific parts of it.
  */
 export interface Ll2Runtime {
   env: Ll2Bindings;
@@ -530,8 +529,11 @@ export async function serveCached(
 
 // ── Scheduled refresh ────────────────────────────────────────────────────────
 //
-// workers/ll2-refresh calls refreshToKv on a cron so the feed no longer waits
-// for a visitor to find it stale. Its outcome is recorded under STATUS_KV_KEY,
+// scripts/refresh-launches.ts, run every 15 minutes by a GitHub Actions
+// workflow, writes the feed so it no longer waits for a visitor to find it
+// stale. It runs outside Cloudflare on purpose: Workers call out from IPs
+// shared with every other Worker using the API, and a cron Worker doing this
+// job drew a 429 on every run. Its outcome is recorded under STATUS_KV_KEY,
 // which /api/status serves: the one place that says whether refreshes are
 // landing, without digging through Cloudflare's real-time logs.
 
@@ -543,7 +545,7 @@ export interface RefreshStatus {
   /** 'ok', 'skipped', or the upstream status / error name that failed it. */
   lastResult: string;
   lastError: string | null;
-  /** Upstream's Retry-After from the last refusal; the cron waits it out. */
+  /** When the last refusal's Retry-After ends; informational only. */
   retryAt: number | null;
 }
 
@@ -554,60 +556,4 @@ export async function readRefreshStatus(kv: KVNamespace | undefined): Promise<Re
   } catch {
     return null;
   }
-}
-
-/**
- * Refresh one resource into KV, for a scheduled caller.
- *
- * Deliberately ignores the shared cooldown. A cooldown is restarted by any
- * endpoint's 429, so a steady trickle of detail lookups could keep it alive
- * indefinitely and starve the feed, which is how the schedule froze for days.
- * The cron's few calls an hour are the budget's first claim; it holds back
- * only for a Retry-After that upstream gave the cron itself, or when a copy is
- * already fresh enough that the call would buy nothing.
- */
-export async function refreshToKv(
-  runtime: Ll2Runtime,
-  options: Ll2CacheOptions,
-  { skipIfYoungerThanSeconds = 0 }: { skipIfYoungerThanSeconds?: number } = {}
-): Promise<RefreshStatus> {
-  const kv = runtime.env.LAUNCHES_CACHE;
-  const previous = await readRefreshStatus(kv);
-  const now = Date.now();
-  const status: RefreshStatus = {
-    lastAttemptAt: now,
-    lastSuccessAt: previous?.lastSuccessAt ?? null,
-    lastResult: 'skipped',
-    lastError: null,
-    retryAt: previous?.retryAt ?? null,
-  };
-
-  const existing = await kvRead(kv, options.kvKey);
-  if (status.retryAt && status.retryAt > now) {
-    status.lastError = `waiting out Retry-After until ${new Date(status.retryAt).toISOString()}`;
-  } else if (existing && isYoungerThan(existing, skipIfYoungerThanSeconds)) {
-    status.lastError = 'stored copy is still fresh';
-  } else {
-    try {
-      const { fetchedAt } = await fetchAndStore(runtime, options);
-      status.lastResult = 'ok';
-      status.lastSuccessAt = fetchedAt;
-      status.retryAt = null;
-    } catch (err) {
-      const upstreamStatus = err instanceof UpstreamError ? err.status : null;
-      status.lastResult = upstreamStatus ? String(upstreamStatus) : (err as Error)?.name || 'error';
-      status.lastError = (err as Error)?.message ?? String(err);
-      if (err instanceof UpstreamError && err.status === 429) {
-        // Tell visitor endpoints too: while upstream is refusing, their calls
-        // would only extend the refusal.
-        const until = startCooldown(runtime, err.retryAfterSeconds);
-        status.retryAt = err.retryAfterSeconds != null ? until : null;
-      }
-    }
-  }
-
-  // Awaited, not waitUntil: the next run's Retry-After check depends on this
-  // having landed, and a cron has no visitor waiting on its latency.
-  if (kv) await kv.put(STATUS_KV_KEY, JSON.stringify(status)).catch(() => {});
-  return status;
 }

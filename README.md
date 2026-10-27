@@ -71,12 +71,15 @@ Launch responses use an edge cache and an optional shared Workers KV namespace, 
 
 ### Scheduled feed refresh
 
-The upcoming-launches feed is refreshed by a separate cron Worker, `workers/ll2-refresh`, every 15 minutes, so visitor requests read it from KV instead of competing for the free tier's 15 calls/hour. Visitors fetch the feed themselves only if the stored copy is more than an hour old. To deploy it:
+The upcoming-launches feed is refreshed every 15 minutes by a GitHub Actions workflow (`.github/workflows/refresh-launches.yml`, running `scripts/refresh-launches.ts`). The workflow writes the feed to KV through Cloudflare's API, so visitor requests read it from KV instead of competing for the free tier's 15 calls/hour. Visitors fetch the feed themselves only if the stored copy is more than an hour old.
 
-1. Set `id` in `workers/ll2-refresh/wrangler.toml` to the namespace already bound as `LAUNCHES_CACHE` in the Pages project.
-2. Run `npx wrangler deploy` from `workers/ll2-refresh` (and `npx wrangler secret put LL2_TOKEN` there too, if a token is in use).
+The refresh runs outside Cloudflare on purpose: the free tier limits calls per IP, and Cloudflare Workers call out from IPs shared with every other Worker using the API, so a cron Worker drew a 429 on every run. To set the workflow up, add these in the repository settings:
 
-`/api/status` reports the feed's age, any active rate-limit cooldown, and the cron's last attempt and result. Test the cron locally with `npx wrangler dev --test-scheduled`, then `curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"`.
+- Secret `CLOUDFLARE_API_TOKEN`: an API token with the "Workers KV Storage: Edit" permission.
+- Variable `CLOUDFLARE_ACCOUNT_ID`.
+- Variable `KV_NAMESPACE_ID`: the namespace bound as `LAUNCHES_CACHE` in the Pages project.
+
+`/api/status` reports the feed's age, any active rate-limit cooldown, and the refresh's last attempt and result. Run the workflow by hand from the Actions tab (Run workflow) to test it.
 
 Vite development and preview servers do not run Pages Functions. To serve the build alongside the Functions locally:
 
