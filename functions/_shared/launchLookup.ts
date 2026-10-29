@@ -100,8 +100,7 @@ export function launchBySlugOptions(slug: string): Ll2CacheOptions {
   };
 }
 
-// The feed is refreshed by scripts/refresh-launches.ts (GitHub Actions) every
-// 15 minutes. Past an hour
+// The feed is refreshed by workers/ll2-refresh every 15 minutes. Past an hour
 // without a new copy (four missed runs), the cron is presumed broken and
 // visitors may fetch it themselves, within their capped share of the budget.
 const FEED_VISITOR_FETCH_AFTER_SECONDS = 60 * 60;
