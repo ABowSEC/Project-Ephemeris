@@ -10,13 +10,16 @@ import { hasFlown } from '../data/launchStatus';
 import { launchDate } from '../utils/launchFields';
 import type { LaunchListItem } from '../types/launchLibrary';
 
-// Well beyond the normal refresh cadence (5-15 min, see FRESH_MS), so a
-// routine refetch delay never trips this — only a sustained run of failures
-// (upstream rate-limited with no stale-on-error copy available, etc.) does.
-// Past this age, showing the data as if it's current would be misleading.
-const STALE_WARNING_MS = 45 * 60 * 1000;
+// The scheduled refresh keeps the feed well under an hour old, so data this
+// old means refreshes have been failing for days. Past this age the UI warns
+// outright instead of just showing when the data was last updated.
+export const STALE_WARNING_MS = 3 * 24 * 60 * 60 * 1000;
 
-// In stale data, a launch still marked Go this long after its T-0 almost
+// Older than a normal refresh cycle, but nowhere near STALE_WARNING_MS: the
+// point past which a launch's status in the feed can't be taken at face value.
+const OLD_DATA_MS = 45 * 60 * 1000;
+
+// In old data, a launch still marked Go this long after its T-0 almost
 // certainly flew or slipped; the feed just hasn't said which yet. Fresh data
 // is trusted as-is, since a launch can sit in a hold past T-0 for real.
 const PAST_T0_GRACE_MS = 2 * 60 * 60 * 1000;
@@ -51,7 +54,8 @@ export function useUpcomingLaunches(): UpcomingLaunchesResult {
 
   const launches = entry?.data.results ?? [];
   const fetchedAt = entry?.fetchedAt ?? null;
-  const stale = fetchedAt != null && Date.now() - fetchedAt > STALE_WARNING_MS;
+  const age = fetchedAt != null ? Date.now() - fetchedAt : 0;
+  const stale = age > STALE_WARNING_MS;
 
   // The feed is sorted by T-0 ascending, but its first entry isn't
   // necessarily what should be highlighted as "next": once a launch's
@@ -63,7 +67,7 @@ export function useUpcomingLaunches(): UpcomingLaunchesResult {
   const nextLaunch =
     launches.find((launch) => {
       if (hasFlown(launch.status)) return false;
-      if (!stale) return true;
+      if (age <= OLD_DATA_MS) return true;
       const date = launchDate(launch);
       return !date || date.getTime() > Date.now() - PAST_T0_GRACE_MS;
     }) ?? null;
@@ -95,7 +99,7 @@ export function useUpcomingLaunches(): UpcomingLaunchesResult {
     };
   }, [refetch]);
 
-  // For the manual "refresh" action on the stale-data notice: bypasses the
+  // For the manual "refresh" action on the freshness indicator: bypasses the
   // freshness check so it actually reaches the proxy instead of replaying
   // the same stale localStorage copy the user is trying to get rid of.
   const refresh = useCallback(() => refetch({ force: true }), [refetch]);
