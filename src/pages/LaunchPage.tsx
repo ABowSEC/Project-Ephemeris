@@ -14,7 +14,7 @@ import {
 import { FaRocket, FaMapMarkerAlt } from "react-icons/fa";
 import LaunchFeed from "../components/LaunchFeed";
 import CountdownDisplay from "../components/launch/CountdownDisplay";
-import StaleDataNotice from "../components/StaleDataNotice";
+import DataFreshness from "../components/DataFreshness";
 import StatusBadge from "../components/StatusBadge";
 import LaunchMetaLine from "../components/LaunchMetaLine";
 import LaunchHero, { LaunchName } from "../components/LaunchHero";
@@ -25,7 +25,7 @@ import { pulseOpacity } from "../utils/animations";
 
 export default function LaunchPage() {
   usePageMeta("/launches");
-  const { nextLaunch, loading, stale, fetchedAt, refresh } = useUpcomingLaunches();
+  const { nextLaunch, loading, fetchedAt, refresh } = useUpcomingLaunches();
 
   return (
     <Container maxW="8xl" py={8}>
@@ -93,7 +93,7 @@ export default function LaunchPage() {
               ) : nextLaunch ? (
                 <CountdownDisplay launch={nextLaunch} />
               ) : null}
-              <StaleDataNotice stale={stale} fetchedAt={fetchedAt} onRefresh={refresh} />
+              <DataFreshness fetchedAt={fetchedAt} onRefresh={refresh} />
             </>
           }
         />

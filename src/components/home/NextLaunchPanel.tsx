@@ -4,7 +4,7 @@ import { FaMapMarkerAlt, FaRocket } from "react-icons/fa";
 import { useUpcomingLaunches } from "../../hooks/useUpcomingLaunches";
 import { useLaunchCountdown } from "../../hooks/useCountdown";
 import { formatNet, hasPreciseTime, launchPath } from "../../utils/launchFields";
-import StaleDataNotice from "../StaleDataNotice";
+import DataFreshness from "../DataFreshness";
 import { pulseOpacity } from "../../utils/animations";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -12,7 +12,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 // Compact live next-launch panel for the hero; shares the app-wide cached
 // launch data so it costs no extra API requests.
 export default function NextLaunchPanel() {
-  const { nextLaunch: next, loading, stale, fetchedAt, refresh } = useUpcomingLaunches();
+  const { nextLaunch: next, loading, fetchedAt, refresh } = useUpcomingLaunches();
   const countdown = useLaunchCountdown(next);
 
   if (loading) {
@@ -89,7 +89,7 @@ export default function NextLaunchPanel() {
         </HStack>
       )}
 
-      <StaleDataNotice stale={stale} fetchedAt={fetchedAt} onRefresh={refresh} />
+      <DataFreshness fetchedAt={fetchedAt} onRefresh={refresh} />
     </VStack>
   );
 }
