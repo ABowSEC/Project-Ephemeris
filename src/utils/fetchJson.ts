@@ -3,11 +3,14 @@
 
 export class ApiError extends Error {
   status: number | null;
+  /** The failed response's headers, when there was a response at all. */
+  headers: Headers | null;
 
-  constructor(message: string, status: number | null = null) {
+  constructor(message: string, status: number | null = null, headers: Headers | null = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.headers = headers;
   }
 }
 
@@ -43,7 +46,7 @@ export async function fetchJsonWithHeaders<T = unknown>(
 
   try {
     const res = await fetch(url, { signal: controller.signal, cache });
-    if (!res.ok) throw new ApiError(messageForStatus(res.status), res.status);
+    if (!res.ok) throw new ApiError(messageForStatus(res.status), res.status, res.headers);
     return { data: (await res.json()) as T, headers: res.headers };
   } catch (err) {
     if (err instanceof ApiError) throw err;

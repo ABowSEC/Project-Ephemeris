@@ -89,6 +89,15 @@ export class VisitorBudgetError extends UpstreamError {
   }
 }
 
+/** A 429 from upstream, or one we stand in for it (cooldown, visitor budget). */
+function isRateLimited(err: unknown): boolean {
+  return err instanceof UpstreamError && err.status === 429;
+}
+
+// Response header marking a reply served because a fresh copy was refused
+// with a 429. Exposed to the browser so it can fetch the feed itself.
+const RATE_LIMITED_HEADER = 'x-upstream-rate-limited';
+
 /** Retry-After is either delta-seconds or an HTTP date. */
 function parseRetryAfter(value: string | null): number | null {
   if (!value) return null;
@@ -389,10 +398,23 @@ export interface Ll2Runtime {
  * a cached negative entry), and rethrows the upstream error only when there is
  * no stale copy anywhere to fall back on.
  */
+interface Resolved {
+  body: string;
+  status: CacheStatus;
+  fetchedAt: number | null;
+  /**
+   * Set when this request needed a fresh copy and was refused with a 429:
+   * by upstream, by the shared cooldown a recent 429 started, or by our own
+   * visitor budget. The browser treats it as the cue to try Space Devs
+   * itself (see src/services/launchStore.ts).
+   */
+  rateLimited?: boolean;
+}
+
 export async function resolveCached(
   context: Ll2Context,
   options: Ll2CacheOptions
-): Promise<{ body: string; status: CacheStatus; fetchedAt: number | null }> {
+): Promise<Resolved> {
   const {
     upstreamUrl,
     kvKey,
@@ -455,13 +477,16 @@ export async function resolveCached(
   } catch (caught) {
     if (caught instanceof NotFoundError) throw caught;
     const err = noteRejection(context, caught);
+    const rateLimited = isRateLimited(caught);
     // Stale-on-error: prefer this PoP's copy, then the global one, then a
     // lesser copy from elsewhere, then fail.
-    if (l1) return { body: check(l1.body), status: 'STALE', fetchedAt: l1.fetchedAt };
-    if (kvCopy) return { body: check(kvCopy.body), status: 'KV-STALE', fetchedAt: kvCopy.fetchedAt };
+    if (l1) return { body: check(l1.body), status: 'STALE', fetchedAt: l1.fetchedAt, rateLimited };
+    if (kvCopy) {
+      return { body: check(kvCopy.body), status: 'KV-STALE', fetchedAt: kvCopy.fetchedAt, rateLimited };
+    }
     if (fallback) {
       const body = await fallback(context);
-      if (body) return { body, status: 'FALLBACK', fetchedAt: null };
+      if (body) return { body, status: 'FALLBACK', fetchedAt: null, rateLimited };
     }
     throw err;
   }
@@ -497,7 +522,7 @@ export async function serveCached(
   options: Ll2CacheOptions
 ): Promise<Response> {
   try {
-    const { body, status, fetchedAt } = await resolveCached(context, options);
+    const { body, status, fetchedAt, rateLimited } = await resolveCached(context, options);
     const headers: Record<string, string> = {
       'content-type': 'application/json',
       'cache-control': `public, max-age=${options.browserMaxAge ?? DEFAULT_BROWSER_MAX_AGE}`,
@@ -506,6 +531,7 @@ export async function serveCached(
     // When upstream last answered, so a stale copy served under duress is
     // labeled stale in the browser rather than stamped with the time it arrived.
     if (fetchedAt) headers['x-fetched-at'] = String(fetchedAt);
+    if (rateLimited) headers[RATE_LIMITED_HEADER] = '1';
     return new Response(body, { headers });
   } catch (err) {
     if (err instanceof NotFoundError) {
@@ -517,6 +543,7 @@ export async function serveCached(
     // 503, not 502: "try later" is the truth when upstream is rate limiting,
     // and Retry-After tells the client when later is.
     const headers: Record<string, string> = { 'cache-control': 'no-store' };
+    if (isRateLimited(err)) headers[RATE_LIMITED_HEADER] = '1';
     if (err instanceof UpstreamError && err.retryAfterSeconds != null) {
       headers['retry-after'] = String(Math.ceil(err.retryAfterSeconds));
     }
