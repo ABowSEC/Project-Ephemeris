@@ -343,6 +343,114 @@ export function getCachedLaunchBySlug(slug: string): AnyLaunch | null {
   return getCachedLaunches()?.results?.find((launch) => launch.slug === slug) ?? null;
 }
 
+// The detail pages get the same last-resort fallback as the feed (see
+// "Direct fallback" above): only when /api/launch/<slug> says its upstream
+// ask was refused with a 429 does the browser look the launch up on Space
+// Devs itself, and the copy stays in this browser. These calls share the
+// visitor's 15/hour with the feed's (at most 4), so they are capped at
+// DIRECT_DETAIL_PER_HOUR across all tabs, a manual refresh included.
+const DIRECT_DETAIL_PER_HOUR = 6;
+const DIRECT_DETAIL_ATTEMPTS_KEY = 'ephemeris.directDetailAttempts';
+const HOUR_MS = 60 * 60 * 1000;
+
+function claimDirectDetailAttempt(): boolean {
+  try {
+    const now = Date.now();
+    const parsed: unknown = JSON.parse(localStorage.getItem(DIRECT_DETAIL_ATTEMPTS_KEY) ?? '[]');
+    const recent = (Array.isArray(parsed) ? parsed : []).filter(
+      (at): at is number => typeof at === 'number' && now - at < HOUR_MS
+    );
+    if (recent.length >= DIRECT_DETAIL_PER_HOUR) return false;
+    localStorage.setItem(DIRECT_DETAIL_ATTEMPTS_KEY, JSON.stringify([...recent, now]));
+  } catch {
+    // Without storage there is no shared cap; each lookup is still spaced by
+    // the detail cache's freshness window, so allow it.
+  }
+  return true;
+}
+
+const directDetailUrl = (slug: string) =>
+  `${LL2_BASE}/launches/?slug=${encodeURIComponent(slug)}&mode=detailed&limit=1`;
+
+async function fetchDetailDirect(slug: string): Promise<LaunchDetailed | null> {
+  try {
+    const page = await fetchJson<Paginated<LaunchDetailed>>(directDetailUrl(slug), {
+      timeoutMs: 12000,
+      cache: 'no-store',
+    });
+    const launch = page?.results?.[0];
+    return launch?.id ? launch : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchDetail(
+  slug: string,
+  force: boolean,
+  cached: CacheEntry<LaunchDetailed> | null
+): Promise<AnyLaunch> {
+  // The proxy unwraps the envelope for us; a direct call in local dev does
+  // not, so the two paths converge here rather than at every call site.
+  const url = USES_PROXY ? `/api/launch/${encodeURIComponent(slug)}` : directDetailUrl(slug);
+
+  let proxied: CacheEntry<LaunchDetailed> | null = null;
+  // The proxy's lesser stand-in: the launch's entry from the feed, without
+  // the detailed-only fields. Never preferred over a cached detailed copy.
+  let proxiedIsFeedEntry = false;
+  let proxyError: unknown = null;
+  let rateLimited = false;
+  try {
+    const { data: payload, headers } = await fetchJsonWithHeaders<LaunchDetailed | Paginated<LaunchDetailed>>(url, {
+      timeoutMs: 12000,
+      cache: force ? 'no-store' : 'default',
+    });
+    const launch = USES_PROXY
+      ? (payload as LaunchDetailed)
+      : (payload as Paginated<LaunchDetailed>)?.results?.[0];
+    if (!launch?.id) throw new ApiError('That launch could not be found.', 404);
+    proxied = { data: launch, fetchedAt: fetchedAtFrom(headers) };
+    proxiedIsFeedEntry = headers.get('x-proxy-cache') === 'FALLBACK';
+    rateLimited = headers.get(RATE_LIMITED_HEADER) === '1';
+  } catch (err) {
+    // A 404 is a real answer: the slug does not exist, and retrying, going
+    // direct, or showing an old copy would all be wrong.
+    if ((err as ApiError)?.status === 404) throw err;
+    proxyError = err;
+    rateLimited = err instanceof ApiError && err.headers?.get(RATE_LIMITED_HEADER) === '1';
+  }
+
+  if (USES_PROXY && rateLimited && claimDirectDetailAttempt()) {
+    const direct = await fetchDetailDirect(slug);
+    if (direct) {
+      writeDetailCache(slug, direct, Date.now());
+      return direct as AnyLaunch;
+    }
+  }
+
+  if (proxied && proxiedIsFeedEntry) {
+    // Shown, never cached: it carries no x-fetched-at, so it would be stamped
+    // as brand new and could outrank a real detailed copy later.
+    return (cached?.data ?? proxied.data) as AnyLaunch;
+  }
+  if (proxied) {
+    // A rate-limited proxy is serving its last stale copy, and an earlier
+    // direct lookup in this browser can be newer: keep whichever is.
+    const newest = rateLimited && cached && cached.fetchedAt > proxied.fetchedAt ? cached : proxied;
+    writeDetailCache(slug, newest.data, newest.fetchedAt);
+    return newest.data as AnyLaunch;
+  }
+  // Stale data beats an error page.
+  if (cached) return cached.data;
+  // Never fetched this launch before and the endpoint is down. The feed is a
+  // separate request that may well have succeeded, and it carries this
+  // launch: the same lesser copy getCachedLaunchBySlug already hands the page
+  // on a cold click-through. Prefer it to an error page.
+  const fromFeed = getCachedLaunches()?.results?.find((launch) => launch.slug === slug);
+  if (fromFeed) return fromFeed;
+  throw proxyError;
+}
+
 /**
  * Get one launch by its Launch Library slug, hitting the network only when the
  * cached copy is stale. Concurrent callers for the same slug share a request.
@@ -355,41 +463,9 @@ export async function getLaunchBySlug(slug: string, { force = false }: { force?:
   }
 
   if (!detailInflight.has(slug)) {
-    // The proxy unwraps the envelope for us; a direct call in local dev does
-    // not, so the two paths converge here rather than at every call site.
-    const url = USES_PROXY
-      ? `/api/launch/${encodeURIComponent(slug)}`
-      : `${LL2_BASE}/launches/?slug=${encodeURIComponent(slug)}&mode=detailed&limit=1`;
-
-    const request = fetchJsonWithHeaders<LaunchDetailed | Paginated<LaunchDetailed>>(url, {
-      timeoutMs: 12000,
-      cache: force ? 'no-store' : 'default',
-    })
-      .then(({ data: payload, headers }) => {
-        const launch = USES_PROXY
-          ? (payload as LaunchDetailed)
-          : (payload as Paginated<LaunchDetailed>)?.results?.[0];
-        if (!launch?.id) throw new ApiError('That launch could not be found.', 404);
-        writeDetailCache(slug, launch, fetchedAtFrom(headers));
-        return launch as AnyLaunch;
-      })
-      .catch((err) => {
-        // Stale data beats an error page, but a 404 is a real answer: the slug
-        // does not exist, and retrying or showing an old copy would both be wrong.
-        if (err?.status === 404) throw err;
-        if (cached) return cached.data;
-        // Never fetched this launch before and the endpoint is down. The feed
-        // is a separate request that may well have succeeded, and it carries
-        // this launch — the same lesser copy getCachedLaunchBySlug already
-        // hands the page on a cold click-through. Prefer it to an error page.
-        const fromFeed = getCachedLaunches()?.results?.find((launch) => launch.slug === slug);
-        if (fromFeed) return fromFeed;
-        throw err;
-      })
-      .finally(() => {
-        detailInflight.delete(slug);
-      });
-
+    const request = fetchDetail(slug, force, cached).finally(() => {
+      detailInflight.delete(slug);
+    });
     detailInflight.set(slug, request);
   }
 
