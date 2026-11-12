@@ -8,7 +8,7 @@
 // Stale cache is served as a fallback when the network or rate limit fails,
 // which also gives the PWA offline something to render.
 
-import { ApiError, fetchJsonWithHeaders } from '../utils/fetchJson';
+import { ApiError, fetchJson, fetchJsonWithHeaders } from '../utils/fetchJson';
 import type {
   AnyLaunch,
   LaunchDetailed,
@@ -159,25 +159,96 @@ export async function getUpcomingLaunches({ force = false }: { force?: boolean }
   }
 
   if (!inflight) {
-    inflight = fetchJsonWithHeaders<UpcomingLaunchesResponse>(API_URL, {
-      timeoutMs: 12000,
-      cache: force ? 'no-store' : 'default',
-    })
-      .then(({ data, headers }) => {
-        writeCache(data, fetchedAtFrom(headers));
-        return data;
-      })
-      .catch((err) => {
-        // Serve stale data rather than an error whenever we have any
-        if (cached) return cached.data;
-        throw err;
-      })
-      .finally(() => {
-        inflight = null;
-      });
+    inflight = fetchFeed(force, cached).finally(() => {
+      inflight = null;
+    });
   }
 
   return inflight;
+}
+
+// ── Direct fallback ──────────────────────────────────────────────────────────
+//
+// The feed's fallbacks are layered, each used only when the one before it is
+// rate limited:
+//   1. scripts/refresh-launches.ts (GitHub Actions) and the
+//      workers/ll2-refresh cron Worker each write the feed to KV every 15
+//      minutes, and the proxy serves that copy.
+//   2. Once the copy is over an hour old, the proxy asks Space Devs itself
+//      (functions/_shared/ll2Cache.ts). Its calls come from Cloudflare IPs
+//      that other sites share, so they can draw 429s too.
+//   3. When the proxy says that ask was refused with a 429 (the
+//      x-upstream-rate-limited header, on a stale copy or on a 503), this
+//      browser asks Space Devs directly, spending the visitor's own 15
+//      calls/hour. The result stays in this browser: it is never written
+//      back to KV, which can't trust a copy a client sends.
+
+const DIRECT_URL = `${LL2_BASE}/launches/upcoming/?limit=50`;
+const RATE_LIMITED_HEADER = 'x-upstream-rate-limited';
+
+// At most one direct call per window, shared by every tab through
+// localStorage: 4 an hour, well inside the visitor's 15. A manual refresh
+// skips the wait.
+const DIRECT_MIN_INTERVAL_MS = 15 * 60 * 1000;
+const DIRECT_ATTEMPT_KEY = 'ephemeris.directFeedAttemptAt';
+
+function claimDirectAttempt(force: boolean): boolean {
+  try {
+    const last = Number(localStorage.getItem(DIRECT_ATTEMPT_KEY)) || 0;
+    if (!force && Date.now() - last < DIRECT_MIN_INTERVAL_MS) return false;
+    localStorage.setItem(DIRECT_ATTEMPT_KEY, String(Date.now()));
+  } catch {
+    // Without storage there is no cross-tab throttle; FRESH_MS still spaces
+    // this tab's checks, so allow it.
+  }
+  return true;
+}
+
+async function fetchDirect(): Promise<UpcomingLaunchesResponse | null> {
+  try {
+    const data = await fetchJson<UpcomingLaunchesResponse>(DIRECT_URL, { timeoutMs: 12000, cache: 'no-store' });
+    return Array.isArray(data?.results) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFeed(
+  force: boolean,
+  cached: CacheEntry<UpcomingLaunchesResponse> | null
+): Promise<UpcomingLaunchesResponse> {
+  let proxied: CacheEntry<UpcomingLaunchesResponse> | null = null;
+  let proxyError: unknown = null;
+  let rateLimited = false;
+  try {
+    const { data, headers } = await fetchJsonWithHeaders<UpcomingLaunchesResponse>(API_URL, {
+      timeoutMs: 12000,
+      cache: force ? 'no-store' : 'default',
+    });
+    proxied = { data, fetchedAt: fetchedAtFrom(headers) };
+    rateLimited = headers.get(RATE_LIMITED_HEADER) === '1';
+  } catch (err) {
+    proxyError = err;
+    rateLimited = err instanceof ApiError && err.headers?.get(RATE_LIMITED_HEADER) === '1';
+  }
+
+  if (USES_PROXY && rateLimited && claimDirectAttempt(force)) {
+    const direct = await fetchDirect();
+    if (direct) {
+      writeCache(direct, Date.now());
+      return direct;
+    }
+  }
+
+  // Keep whichever copy is newer: a direct fetch from earlier can be fresher
+  // than what the rate-limited proxy is still serving. Rewriting the kept
+  // copy also records this check, so the next one waits out FRESH_MS.
+  const newest = proxied && (!cached || proxied.fetchedAt >= cached.fetchedAt) ? proxied : cached;
+  if (newest) {
+    writeCache(newest.data, newest.fetchedAt);
+    return newest.data;
+  }
+  throw proxyError;
 }
 
 // ── Single launch, by slug ───────────────────────────────────────────────────

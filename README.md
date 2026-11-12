@@ -71,12 +71,17 @@ Launch responses use an edge cache and an optional shared Workers KV namespace, 
 
 ### Scheduled feed refresh
 
-The upcoming-launches feed is refreshed by a separate cron Worker, `workers/ll2-refresh`, every 15 minutes, so visitor requests read it from KV instead of competing for the free tier's 15 calls/hour. Visitors fetch the feed themselves only if the stored copy is more than an hour old. To deploy it:
+The upcoming-launches feed is refreshed every 15 minutes by a GitHub Actions workflow (`.github/workflows/refresh-launches.yml`, running `scripts/refresh-launches.ts`). The workflow writes the feed to KV through Cloudflare's API, so visitor requests read it from KV instead of competing for the free tier's 15 calls/hour. Visitors fetch the feed themselves only if the stored copy is more than an hour old. If that visitor fetch is refused with a 429, the proxy marks its reply with `x-upstream-rate-limited: 1`, and the visitor's browser then fetches the feed straight from Space Devs (at most once every 15 minutes, on the visitor's own rate limit) and shows that instead. That copy stays in the browser and is never written back to KV.
 
-1. Set `id` in `workers/ll2-refresh/wrangler.toml` to the namespace already bound as `LAUNCHES_CACHE` in the Pages project.
-2. Run `npx wrangler deploy` from `workers/ll2-refresh` (and `npx wrangler secret put LL2_TOKEN` there too, if a token is in use).
+The workflow runs outside Cloudflare on purpose: the free tier limits calls per IP, and Cloudflare Workers call out from IPs shared with every other Worker using the API, so a cron Worker often draws a 429. One is still kept as a backup: `workers/ll2-refresh` also runs every 15 minutes and skips its call when the workflow wrote a copy in the last 5 minutes. To deploy it, run `npx wrangler deploy` from `workers/ll2-refresh` (the KV `id` in its `wrangler.toml` must match the namespace bound as `LAUNCHES_CACHE`).
 
-`/api/status` reports the feed's age, any active rate-limit cooldown, and the cron's last attempt and result. Test the cron locally with `npx wrangler dev --test-scheduled`, then `curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"`.
+To set the workflow up, add these in the repository settings:
+
+- Secret `CLOUDFLARE_API_TOKEN`: an API token with the "Workers KV Storage: Edit" permission.
+- Variable `CLOUDFLARE_ACCOUNT_ID`.
+- Variable `KV_NAMESPACE_ID`: the namespace bound as `LAUNCHES_CACHE` in the Pages project.
+
+`/api/status` reports the feed's age, any active rate-limit cooldown, and each refresher's last attempt and result (`scheduledRefresh` for the workflow, `cronRefresh` for the Worker). Run the workflow by hand from the Actions tab (Run workflow) to test it. Test the cron locally with `npx wrangler dev --test-scheduled`, then `curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"`.
 
 Vite development and preview servers do not run Pages Functions. To serve the build alongside the Functions locally:
 

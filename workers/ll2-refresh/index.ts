@@ -6,9 +6,12 @@
 // cooldown kept restarting and the feed never won a call: the site served a
 // days-old schedule while reporting STALE on every request.
 //
-// Now this cron owns the feed. It writes the same KV key, in the same shape,
-// that the Pages Functions read (functions/_shared/ll2Cache.ts), so visitors
-// are served from KV and never spend upstream calls on the feed. It must be
+// The GitHub Actions workflow (scripts/refresh-launches.ts) is now the main
+// refresher, since this Worker calls from Cloudflare IPs other Workers share
+// and often draws a 429. This cron stays as a backup. It writes the same KV
+// key, in the same shape, that the Pages Functions read
+// (functions/_shared/ll2Cache.ts), and records its result under its own
+// status key so /api/status shows both refreshers. It must be
 // bound to the same LAUNCHES_CACHE namespace as the Pages project — see
 // wrangler.toml.
 
@@ -16,8 +19,8 @@ import { refreshToKv, type Ll2Bindings } from '../../functions/_shared/ll2Cache'
 import { upcomingFeedOptions } from '../../functions/_shared/launchLookup';
 
 // Runs every 15 minutes (wrangler.toml). A copy younger than this was written
-// moments ago — by the visitor safety net or an overlapping run — and
-// refetching it would spend a call for nothing.
+// moments ago, by the workflow, the visitor safety net, or an overlapping
+// run, and refetching it would spend a call for nothing.
 const SKIP_IF_YOUNGER_THAN_SECONDS = 5 * 60;
 
 export default {
