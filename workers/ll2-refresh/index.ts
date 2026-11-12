@@ -20,8 +20,7 @@ import { upcomingFeedOptions } from '../../functions/_shared/launchLookup';
 
 // Runs every 15 minutes (wrangler.toml). A copy younger than this was written
 // moments ago, by the workflow, the visitor safety net, or an overlapping
-// run, and
-// refetching it would spend a call for nothing.
+// run, and refetching it would spend a call for nothing.
 const SKIP_IF_YOUNGER_THAN_SECONDS = 5 * 60;
 
 export default {
