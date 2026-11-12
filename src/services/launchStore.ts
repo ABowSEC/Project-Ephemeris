@@ -171,8 +171,9 @@ export async function getUpcomingLaunches({ force = false }: { force?: boolean }
 //
 // The feed's fallbacks are layered, each used only when the one before it is
 // rate limited:
-//   1. scripts/refresh-launches.ts (GitHub Actions) writes the feed to KV
-//      every 15 minutes, and the proxy serves that copy.
+//   1. scripts/refresh-launches.ts (GitHub Actions) and the
+//      workers/ll2-refresh cron Worker each write the feed to KV every 15
+//      minutes, and the proxy serves that copy.
 //   2. Once the copy is over an hour old, the proxy asks Space Devs itself
 //      (functions/_shared/ll2Cache.ts). Its calls come from Cloudflare IPs
 //      that other sites share, so they can draw 429s too.

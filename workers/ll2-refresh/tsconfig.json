@@ -1,0 +1,6 @@
+{
+  // Same Workers-runtime setup as functions/tsconfig.json; this Worker imports
+  // the shared cache module from there, so it is included for checking too.
+  "extends": "../../functions/tsconfig.json",
+  "include": [".", "../../functions/_shared"]
+}

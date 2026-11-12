@@ -27,7 +27,7 @@ export default [
   // .wrangler holds the bundled worker `wrangler pages dev` generates from
   // functions/ — machine-written, and linting it reports on esbuild's output
   // rather than on anything anyone can fix.
-  { ignores: ['dist', 'src/wasm', 'crates', '.wrangler'] },
+  { ignores: ['dist', 'src/wasm', 'crates', '.wrangler', 'workers/*/.wrangler'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {

@@ -556,15 +556,21 @@ export async function serveCached(
 
 // ── Scheduled refresh ────────────────────────────────────────────────────────
 //
-// scripts/refresh-launches.ts, run every 15 minutes by a GitHub Actions
-// workflow, writes the feed so it no longer waits for a visitor to find it
-// stale. It runs outside Cloudflare on purpose: Workers call out from IPs
-// shared with every other Worker using the API, and a cron Worker doing this
-// job drew a 429 on every run. Its outcome is recorded under STATUS_KV_KEY,
-// which /api/status serves: the one place that says whether refreshes are
-// landing, without digging through Cloudflare's real-time logs.
+// Two schedulers write the feed, each every 15 minutes, so it no longer waits
+// for a visitor to find it stale:
+//   - scripts/refresh-launches.ts, run by a GitHub Actions workflow. This is
+//     the one expected to land: it calls from GitHub's runners, outside
+//     Cloudflare.
+//   - workers/ll2-refresh, a cron Worker calling refreshToKv. Kept as a
+//     second chance: Workers call out from IPs shared with every other Worker
+//     using the API, so it often draws a 429, but it costs nothing when it
+//     does, and it skips its call when the workflow has just written a copy.
+// Each records its outcome under its own key, which /api/status serves: the
+// one place that says whether refreshes are landing, without digging through
+// GitHub's or Cloudflare's logs.
 
 const STATUS_KV_KEY = 'll2:status';
+export const CRON_STATUS_KV_KEY = 'll2:status:cron';
 
 export interface RefreshStatus {
   lastAttemptAt: number;
@@ -572,15 +578,75 @@ export interface RefreshStatus {
   /** 'ok', 'skipped', or the upstream status / error name that failed it. */
   lastResult: string;
   lastError: string | null;
-  /** When the last refusal's Retry-After ends; informational only. */
+  /** When the last refusal's Retry-After ends. */
   retryAt: number | null;
 }
 
-export async function readRefreshStatus(kv: KVNamespace | undefined): Promise<RefreshStatus | null> {
+export async function readRefreshStatus(
+  kv: KVNamespace | undefined,
+  key: string = STATUS_KV_KEY
+): Promise<RefreshStatus | null> {
   if (!kv) return null;
   try {
-    return await kv.get<RefreshStatus>(STATUS_KV_KEY, 'json');
+    return await kv.get<RefreshStatus>(key, 'json');
   } catch {
     return null;
   }
+}
+
+/**
+ * Refresh one resource into KV, for the cron Worker.
+ *
+ * Deliberately ignores the shared cooldown. A cooldown is restarted by any
+ * endpoint's 429, so a steady trickle of detail lookups could keep it alive
+ * indefinitely and starve the feed. The cron holds back only for a
+ * Retry-After that upstream gave the cron itself, or when a copy is already
+ * fresh enough that the call would buy nothing.
+ */
+export async function refreshToKv(
+  runtime: Ll2Runtime,
+  options: Ll2CacheOptions,
+  { skipIfYoungerThanSeconds = 0 }: { skipIfYoungerThanSeconds?: number } = {}
+): Promise<RefreshStatus> {
+  const kv = runtime.env.LAUNCHES_CACHE;
+  const previous = await readRefreshStatus(kv, CRON_STATUS_KV_KEY);
+  const now = Date.now();
+  const status: RefreshStatus = {
+    lastAttemptAt: now,
+    lastSuccessAt: previous?.lastSuccessAt ?? null,
+    lastResult: 'skipped',
+    lastError: null,
+    retryAt: previous?.retryAt ?? null,
+  };
+
+  const existing = await kvRead(kv, options.kvKey);
+  if (status.retryAt && status.retryAt > now) {
+    status.lastError = `waiting out Retry-After until ${new Date(status.retryAt).toISOString()}`;
+  } else if (existing && isYoungerThan(existing, skipIfYoungerThanSeconds)) {
+    status.lastError = 'stored copy is still fresh';
+  } else {
+    try {
+      const { fetchedAt } = await fetchAndStore(runtime, options);
+      status.lastResult = 'ok';
+      status.lastSuccessAt = fetchedAt;
+      status.retryAt = null;
+    } catch (err) {
+      const upstreamStatus = err instanceof UpstreamError ? err.status : null;
+      status.lastResult = upstreamStatus ? String(upstreamStatus) : (err as Error)?.name || 'error';
+      status.lastError = (err as Error)?.message ?? String(err);
+      if (err instanceof UpstreamError && err.status === 429) {
+        // Tell visitor endpoints too: they call from the same shared
+        // Cloudflare IPs, so while upstream refuses the cron it would refuse
+        // them. A visitor fetch skipped this way still flags its reply as
+        // rate limited, which hands the feed to the browser fallback.
+        const until = startCooldown(runtime, err.retryAfterSeconds);
+        status.retryAt = err.retryAfterSeconds != null ? until : null;
+      }
+    }
+  }
+
+  // Awaited, not waitUntil: the next run's Retry-After check depends on this
+  // having landed, and a cron has no visitor waiting on its latency.
+  if (kv) await kv.put(CRON_STATUS_KV_KEY, JSON.stringify(status)).catch(() => {});
+  return status;
 }

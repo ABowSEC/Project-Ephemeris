@@ -16,7 +16,7 @@
     "wasm": "node scripts/build-wasm.mjs",
     "prewarm": "node scripts/prewarm.mjs",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p functions",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p functions && tsc --noEmit -p workers/ll2-refresh",
     "preview": "vite preview",
     "icons": "node scripts/gen-icons.mjs",
     "og-image": "node scripts/make-og-image.ts"
