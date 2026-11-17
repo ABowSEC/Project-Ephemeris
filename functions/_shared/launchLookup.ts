@@ -1,17 +1,11 @@
-// Slug-to-launch resolution, shared by the JSON endpoint (api/launch/[slug])
-// and the HTML metadata rewriter (launches/[slug]). Both need identical
-// validation and identical cache keys — if they diverged, the rewriter would
-// spend a second upstream call to fetch what the API endpoint already cached.
+// Cache options for launch lookups, shared by api/launch/[slug] and
+// launches/[slug] so they hit the same cache entries.
 
 import { LL2_BASE, NotFoundError, readCached, type Ll2CacheOptions } from './ll2Cache';
 
 /**
- * Launch Library slugs are lowercase kebab-case, e.g.
- * "falcon-9-block-5-starlink-group-17-53".
- *
- * This is a security boundary, not a formatting nicety: the slug is
- * interpolated into an upstream query and used as a KV key, both reachable by
- * anyone who can type a URL. Validate before any I/O.
+ * Lowercase kebab-case, e.g. "falcon-9-block-5-starlink-group-17-53".
+ * Validate before any I/O: the slug ends up in an upstream URL and a KV key.
  */
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,119}$/;
 
@@ -28,27 +22,12 @@ const TERMINAL_STATUSES = new Set([
   'Launch Failure',
 ]);
 
-// Sized against the upstream budget, not against how fresh we would like the
-// data to be. The free tier is 15 requests/hour, and the upcoming feed is
-// refetched once per window for the whole site, so the window sets a floor on
-// what the feed costs: 5 minutes spent 12 of the 15 on the feed alone and left
-// detail-page lookups fighting over the remaining 3, which is what turned a
-// cold cache on deploy day into 502s. At 20 minutes the feed costs 3/hour and
-// the rest of the budget goes to slugs.
-//
-// Nothing user-visible regresses at this window: launch schedules move on the
-// order of hours or days, the browser still revalidates every 60s
-// (browserMaxAge), and the countdown is computed client-side from the launch
-// time rather than from how recently we fetched it.
+// 20 min keeps the feed to 3 of our 15 calls/hour, leaving the rest for
+// detail lookups. Schedules rarely change faster than that.
 const UPCOMING_FRESH_SECONDS = 20 * 60;
 const COMPLETED_FRESH_SECONDS = 6 * 60 * 60;
 
-/**
- * A launch that already flew is effectively immutable, so its record can sit in
- * cache far longer than one that is still slipping. Reading the status off the
- * *stored body* means the TTL adjusts on its own the first time we re-fetch
- * after liftoff — no scheduled invalidation needed.
- */
+/** Flown launches don't change, so they stay fresh much longer. */
 function freshSecondsForBody(body: string): number {
   try {
     const status = (JSON.parse(body) as { status?: { abbrev?: string; name?: string } }).status;
@@ -61,14 +40,7 @@ function freshSecondsForBody(body: string): number {
   }
 }
 
-/**
- * Cache options for one launch, by slug. Caller must have validated the slug.
- *
- * The upstream returns a paginated envelope even for a unique slug; the
- * transform unwraps it so every consumer — the browser, the metadata rewriter,
- * the cache itself — holds a plain launch object rather than each digging
- * through `results[0]` independently.
- */
+/** Cache options for one launch. Validate the slug first. Caches the bare launch, not the page. */
 export function launchBySlugOptions(slug: string): Ll2CacheOptions {
   return {
     upstreamUrl: `${LL2_BASE}/launches/?slug=${encodeURIComponent(slug)}&mode=detailed&limit=1`,
@@ -80,15 +52,8 @@ export function launchBySlugOptions(slug: string): Ll2CacheOptions {
       if (!launch) throw new NotFoundError(`No launch with slug ${slug}`);
       return JSON.stringify(launch);
     },
-    // On the free tier the detailed lookup is the request most likely to be
-    // refused, and a slug nobody has visited yet has no stale copy to fall back
-    // on — which is exactly how a working site produced a hard 502 on a launch
-    // that had just flown. The upcoming feed is a single call the site already
-    // makes for everyone, and it carries this launch's name, status, image, and
-    // T-0; only the detailed-only fields (updates timeline, webcasts, attempt
-    // counts) are missing. A page without those beats no page at all, and the
-    // client tolerates their absence already — it paints feed entries this way
-    // when you click through from the list.
+    // If upstream fails with nothing cached, use the feed entry. It's missing
+    // the detailed fields, but the page handles that.
     async fallback(context) {
       const feed = await readCached<{ results?: { slug?: string }[] }>(
         context,
@@ -100,9 +65,8 @@ export function launchBySlugOptions(slug: string): Ll2CacheOptions {
   };
 }
 
-// The feed is refreshed by workers/ll2-refresh every 15 minutes. Past an hour
-// without a new copy (four missed runs), the cron is presumed broken and
-// visitors may fetch it themselves, within their capped share of the budget.
+// The cron refreshes the feed every 15 min. If it's an hour stale, assume the
+// cron is broken and let visitors fetch it.
 const FEED_VISITOR_FETCH_AFTER_SECONDS = 60 * 60;
 
 export const upcomingFeedOptions: Ll2CacheOptions = {
@@ -110,9 +74,7 @@ export const upcomingFeedOptions: Ll2CacheOptions = {
   kvKey: 'upcoming',
   freshSeconds: UPCOMING_FRESH_SECONDS,
   scheduledRefresh: { visitorFetchAfterSeconds: FEED_VISITOR_FETCH_AFTER_SECONDS },
-  // Stored for up to a month and now overwritten on a schedule, so a 200 that
-  // isn't the feed (an HTML error page, a truncated body) must fail the fetch
-  // rather than replace the last good copy.
+  // Reject a bad 200 (error page, truncated body) so it can't replace a good copy
   transform(raw) {
     const parsed = JSON.parse(raw) as { results?: unknown };
     if (!Array.isArray(parsed.results)) throw new Error('Upcoming feed has no results array');

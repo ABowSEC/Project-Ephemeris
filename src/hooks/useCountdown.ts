@@ -9,10 +9,7 @@ export interface TimeLeft {
   s: number;
 }
 
-/**
- * Ticking countdown to a timestamp. Returns { d, h, m, s } updated every
- * second, or null when the target is missing or already passed.
- */
+/** Countdown to a time as { d, h, m, s }, or null if missing or passed. */
 export function useCountdown(targetTime: string | Date | null | undefined): TimeLeft | null {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
 
@@ -44,12 +41,7 @@ export function useCountdown(targetTime: string | Date | null | undefined): Time
   return timeLeft;
 }
 
-/**
- * Countdown to a launch's T-0, or null when the T-0 is too vague to count
- * down to (a launch pinned only to a day, month, or quarter). Use this rather
- * than useCountdown(launchTime(launch)) so no readout ticks to the second on
- * a date the data only knows to the month.
- */
+/** Countdown to a launch's T-0, or null if the T-0 isn't precise enough to count down. */
 export function useLaunchCountdown(launch: AnyLaunch | null | undefined): TimeLeft | null {
   return useCountdown(hasPreciseTime(launch) ? launchTime(launch) : null);
 }

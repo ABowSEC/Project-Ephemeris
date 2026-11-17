@@ -1,14 +1,5 @@
-// One launch-status vocabulary for the whole app.
-//
-// This previously existed three times, in three shapes, keyed three different
-// ways: LaunchFeed's statusMap (keyed by a mix of abbrevs and invented codes),
-// LaunchPage's STATUS_COLORS (keyed by status.name), and LaunchMapPage's
-// STATUS_DOT (keyed by status.abbrev). They disagreed — a launch on hold was
-// yellow in one view and grey in another — which is exactly the sort of thing
-// that makes a tracker feel unreliable.
-//
-// Keyed by `status.abbrev`, which is the stable identifier upstream; `name` is
-// prose and has changed wording before.
+// Launch status labels and colors for the whole app. Keyed by
+// `status.abbrev`, which is stable; `name` wording has changed before.
 
 import type { LaunchStatus } from '../types/launchLibrary';
 
@@ -46,11 +37,7 @@ const UNKNOWN: StatusStyle = {
   terminal: false,
 };
 
-/**
- * Style for a launch status. Unknown abbrevs fall back to the status's own
- * name rather than the literal word "Unknown" — upstream occasionally adds a
- * status, and showing what it says beats showing nothing.
- */
+/** Style for a launch status. Unknown statuses show their own name. */
 export function statusStyle(status: LaunchStatus | null | undefined): StatusStyle {
   if (!status) return UNKNOWN;
   const known = STATUSES[status.abbrev];

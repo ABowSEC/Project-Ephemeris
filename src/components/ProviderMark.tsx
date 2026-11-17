@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { Box, Image, Text } from '@chakra-ui/react';
 
-// Bundled logos, keyed by the provider name exactly as the upcoming feed
-// spells it. The feed carries no logo_url (only detailed lookups do, and the
-// free tier can't afford one per provider), so anything not listed here gets
-// a monogram instead.
+// Bundled logos, keyed by provider name as the feed spells it. (The feed has
+// no logo URLs.) Anything not listed gets a monogram.
 const LOGOS: Record<string, string> = {
   'National Aeronautics and Space Administration': '/logos/nasa.jpg',
   NASA: '/logos/nasa.jpg',
@@ -20,10 +18,8 @@ const LOGOS: Record<string, string> = {
 const MINOR_WORDS = new Set(['of', 'and', 'the', 'for', 'de', 'du']);
 
 /**
- * Short initials for a provider: a parenthesized abbreviation when the name
- * carries one ("... (ROSCOSMOS)" is too long, "... (CNES)" is not), else the
- * initials of its significant words ("Mitsubishi Heavy Industries" -> MHI),
- * capped at four. A one-word name gets its first letter.
+ * Provider initials: a short parenthesized abbreviation if there is one
+ * ("CNES"), else initials of the main words ("MHI"), max four letters.
  */
 function providerInitials(name: string): string {
   const paren = name.match(/\(([A-Za-z]{2,5})\)/);
@@ -39,11 +35,7 @@ function providerInitials(name: string): string {
     .toUpperCase();
 }
 
-/**
- * The provider's logo on a white tile when we have one, otherwise a quiet
- * one-color monogram tile the same size. Replaces the old cartoon-rocket
- * placeholder, which read as clip art next to real launch photography.
- */
+/** Provider logo on a white tile, or a monogram tile if we don't have one. */
 export default function ProviderMark({ name, size = 52 }: { name: string | null; size?: number }) {
   const logo = name ? LOGOS[name] : undefined;
   const [failed, setFailed] = useState(false);

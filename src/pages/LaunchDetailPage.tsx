@@ -49,21 +49,15 @@ import {
 import type { LaunchListItem } from '../types/launchLibrary';
 
 /**
- * A single launch: /launches/<slug>
- *
- * The permanent, shareable URL for a mission. Social metadata for this page is
- * stamped in at the edge by functions/launches/[slug].ts, since crawlers never
- * run the SPA; usePageMeta below only keeps things right for in-app navigation.
+ * /launches/<slug>. Metadata for direct visits and crawlers comes from
+ * functions/launches/[slug].ts; usePageMeta covers in-app navigation.
  */
 export default function LaunchDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { launch, loading, error, notFound, refetch } = useLaunchDetail(slug);
   const { launches: upcoming } = useUpcomingLaunches();
 
-  // Mirrors what the edge already wrote into the HTML, so a client-side
-  // navigation into this page ends up with the same title and description a
-  // direct visit would have had. buildLaunchTitle/buildLaunchDescription are
-  // the same functions the edge function uses, so the two can't drift.
+  // Same title/description the edge function writes
   usePageMeta(
     '/launches/:slug',
     launch
@@ -76,12 +70,9 @@ export default function LaunchDetailPage() {
       : null
   );
 
-  // A few other upcoming launches to link to: same provider first, then same
-  // rocket family, then whatever's chronologically next. Pulls from the
-  // already-cached upcoming feed, so this costs no extra API requests — but it
-  // also means a *past* launch's "related" list is other still-upcoming
-  // launches rather than topically similar ones, since there's no previous-
-  // launches feed wired up yet.
+  // Other upcoming launches: same provider, then same rocket family, then
+  // next by date. Uses the cached feed, so no extra requests. (Past launches
+  // get upcoming ones here, since there's no past-launches feed yet.)
   const related = useMemo(() => {
     if (!launch) return [] as LaunchListItem[];
     const candidates = upcoming.filter((l) => l.slug !== launch.slug);

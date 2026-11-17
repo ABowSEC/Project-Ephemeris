@@ -1,10 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
-/**
- * Custom hook for managing fullscreen state and functionality.
- * @param {React.RefObject} elementRef - Ref to the element to make fullscreen
- * @returns {Object} Fullscreen state and controls
- */
+/** Fullscreen state and toggle for the element in `elementRef`. */
 export function useFullscreen(elementRef) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 

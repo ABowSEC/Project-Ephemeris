@@ -5,10 +5,8 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
-// Rules shared by the JS and TS blocks. The TS block cannot simply inherit the
-// JS one: typescript-eslint replaces core rules like no-unused-vars with its
-// own, so the varsIgnorePattern the codebase relies on (`MotionBox`-style
-// aliases ESLint can't see used inside JSX) has to be restated there.
+// Shared by the JS and TS blocks. Restated for TS because typescript-eslint
+// replaces no-unused-vars, and we need its varsIgnorePattern there too.
 const reactRules = {
   ...reactHooks.configs.recommended.rules,
   // Mark variables referenced in JSX (e.g. `<motion.div>`) as used.
@@ -25,7 +23,7 @@ const reactPlugins = {
 
 export default [
   // .wrangler holds the bundled worker `wrangler pages dev` generates from
-  // functions/ — machine-written, and linting it reports on esbuild's output
+  // functions/: machine-written, and linting it reports on esbuild's output
   // rather than on anything anyone can fix.
   { ignores: ['dist', 'src/wasm', 'crates', '.wrangler', 'workers/*/.wrangler'] },
   {

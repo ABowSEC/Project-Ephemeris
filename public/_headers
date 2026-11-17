@@ -1,28 +1,11 @@
-# Security headers for Cloudflare Pages.
-#
-# The CSP is enforced. Notes on the non-obvious allowances:
-#   script-src 'wasm-unsafe-eval' - required to instantiate WebAssembly at all
-#                                in Chromium; without it the orbital module
-#                                (crates/orbital) is blocked. It does NOT
-#                                permit eval() or inline script.
-#   style-src 'unsafe-inline'  - Chakra/Emotion inject styles at runtime
-#   img-src https:             - mission images arrive from many third-party
-#                                CDNs (Space Devs, NASA, agency sites); the
-#                                host list is open-ended by nature
-#   worker-src blob:           - MapLibre GL spawns its worker from a blob URL
-#   frame-src youtube/vimeo    - ISS live feed embed; APOD video embeds
-#   connect-src               - the four data APIs plus OpenFreeMap tiles
-#   cloudflareinsights.com     - Web Analytics is enabled on the zone, and
-#                                Cloudflare injects its beacon into every HTML
-#                                response at the edge, after these headers are
-#                                applied. The script is not in our markup and
-#                                cannot be removed from it, so the only choices
-#                                are to grant it or to turn off automatic
-#                                injection in the dashboard. Both entries are
-#                                required: static.* serves the script,
-#                                cloudflareinsights.com is where it reports.
-#                                This extends no new trust — Cloudflare already
-#                                terminates TLS and serves every byte here.
+# Security headers for Cloudflare Pages. Non-obvious CSP entries:
+#   'wasm-unsafe-eval'      - needed to load the orbital WebAssembly module
+#                             (doesn't allow eval or inline script)
+#   style 'unsafe-inline'   - Chakra/Emotion inject styles at runtime
+#   img-src https:          - mission images come from many CDNs
+#   worker-src blob:        - MapLibre's worker
+#   frame-src youtube/vimeo - ISS feed and APOD videos
+#   cloudflareinsights.com  - Cloudflare injects its analytics beacon
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
@@ -34,11 +17,8 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# The service worker must always revalidate so updates roll out. The CSP is
-# detached here: a worker's fetch() calls are checked against the CSP served
-# with the worker script itself, so leaving the /* policy on sw.js blocks
-# runtime caching of cross-origin mission images and fonts. The page policy
-# above still governs everything the document loads.
+# Always revalidate so updates roll out. No CSP here: it would apply to the
+# worker's own fetches and block caching cross-origin images and fonts.
 /sw.js
   Cache-Control: no-cache
   ! Content-Security-Policy

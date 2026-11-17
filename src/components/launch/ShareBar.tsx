@@ -7,12 +7,8 @@ import CalendarMenu from './CalendarMenu';
 import type { AnyLaunch } from '../../types/launchLibrary';
 
 /**
- * Share, track, and calendar actions for a launch.
- *
- * Uses the native share sheet where it exists (which is where sharing is
- * actually convenient — phones) and falls back to copying the link. Note that
- * navigator.share is only present in secure contexts, so it is absent over
- * plain-HTTP LAN preview; the copy fallback covers that.
+ * Share, track, and calendar actions. Uses the native share sheet when
+ * available, else copies the link (navigator.share needs HTTPS).
  */
 export default function ShareBar({ launch }: { launch: AnyLaunch }) {
   const [copied, setCopied] = useState(false);

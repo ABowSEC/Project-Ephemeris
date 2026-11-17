@@ -3,11 +3,9 @@ import { FaBell, FaRegBell } from 'react-icons/fa';
 import { useAlertsEnabled } from '../hooks/useLaunchAlerts';
 
 /**
- * Bell toggle for launch alerts, sized to sit beside the feed's Tracked
- * filter: alerts only ever fire for tracked launches, so the two controls
- * belong together. Enabling requests browser notification permission; if
- * it's unavailable or denied, alerts still work as in-app toasts while the
- * site is open.
+ * Bell toggle for launch alerts (tracked launches only, hence its spot next to
+ * the Tracked filter). Without notification permission, alerts still show as
+ * in-app toasts.
  */
 export default function AlertSettings() {
   const { enabled, setEnabled } = useAlertsEnabled();

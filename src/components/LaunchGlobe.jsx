@@ -12,13 +12,11 @@ import { useFullscreen } from '../hooks/useFullscreen';
 import { useSyncedRef } from '../hooks/useSyncedRef';
 import { withAlpha } from "../utils/color";
 
-// How long the globe must sit untouched before it starts drifting again.
-// Long enough that a deliberate flick-and-let-go doesn't immediately get
-// fought by the idle spin.
+// Pause before the idle spin resumes after a drag.
 const IDLE_DELAY_MS = 1500;
 const IDLE_SPIN_RAD_PER_SEC = 0.05;
 
-// Terminal green — this app's own convention for LIVE data (see theme.js:
+// Terminal green: this app's own convention for LIVE data (see theme.js:
 // "terminal green marks LIVE data"), which an upcoming launch site is.
 const POINT_COLOR = '#00FF9D';
 const HOVER_COLOR = '#B6FFE0'; // lighter tint of the same green
@@ -34,19 +32,12 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
 
-/**
- * Great-circle interpolation between two unit direction vectors. Used to
- * rotate the camera toward a selected site along the shortest path rather
- * than a straight-line lerp, which would cut through the globe for anything
- * but the smallest angular hops.
- */
+/** Rotate along the globe's surface instead of cutting through it. */
 function slerpDirections(a, b, t) {
   const omega = a.angleTo(b);
   if (omega < 1e-5) return b.clone();
   if (Math.abs(Math.PI - omega) < 1e-3) {
-    // Antipodal (or extremely close): no unique great-circle path. Real
-    // launch-site pairs essentially never land exactly here, so a plain
-    // lerp+normalize fallback is fine rather than picking an arbitrary axis.
+    // Opposite points have no unique path; a straight lerp is fine here.
     return a.clone().lerp(b, t).normalize();
   }
   const sinOmega = Math.sin(omega);
@@ -55,9 +46,8 @@ function slerpDirections(a, b, t) {
   return new THREE.Vector3().addScaledVector(a, scaleA).addScaledVector(b, scaleB);
 }
 
-// thespacedevs sends ISO 3166-1 alpha-3 codes (verified against the live
-// API); only the countries that actually operate orbital launch sites are
-// listed, with the raw code as a fallback for anything not covered here.
+// Space Devs sends ISO alpha-3 codes. Only launch countries are listed;
+// anything else shows the raw code.
 const COUNTRY_NAMES = {
   USA: 'United States',
   CHN: 'China',
@@ -82,18 +72,12 @@ function countryLabel(code) {
 
 const MotionBox = motion(Box);
 
-/**
- * Where a floating name tag should sit on screen for a site, or null if
- * that site is currently on the far side of the globe. `site` may be null
- * (nothing to show), in which case this returns null too.
- */
+/** Screen position for a site's name tag, or null if it's behind the globe. */
 function projectLabel(site, globe, camera, renderer) {
   if (!site || !globe) return null;
   const { x, y, z } = globe.getCoords(site.lat, site.lng, 0.02);
   const worldPos = new THREE.Vector3(x, y, z);
-  // The site sits on the globe's surface, so its own position (normalized)
-  // is also its outward surface normal — facing the camera means visible,
-  // facing away means the globe itself is occluding it.
+  // On a sphere, position is also the surface normal. Facing away = hidden.
   const normal = worldPos.clone().normalize();
   const viewDir = camera.position.clone().sub(worldPos).normalize();
   if (normal.dot(viewDir) < 0.05) return null;
@@ -106,23 +90,10 @@ function projectLabel(site, globe, camera, renderer) {
 }
 
 /**
- * Interactive 3D Earth showing upcoming launch sites as raised, pulsing
- * points. Presentational except for `renderSiteDetails` — `sites` is
- * LaunchMapPage's groupBySite() output; clicking a point (or picking one
- * from the HUD selector) calls onSelectSite so the page can update
- * `selectedSite`, which opens an info panel docked to this component's own
- * canvas (not a page-level Drawer) so the panel reads as part of the 3D
- * view rather than a separate overlay — the camera flight and the panel
- * slide in together. `renderSiteDetails(site)` supplies just the panel's
- * body content (the launch list); this component owns the panel's chrome
- * (header, prev/next/close) and animation.
+ * 3D Earth with upcoming launch sites. Clicking a site calls onSelectSite and
+ * opens a details panel; renderSiteDetails supplies the panel body.
  *
- * Three-globe has no click/hover accessors of its own (that's a globe.gl
- * feature, built on top of this lower-level library) — the API surface
- * exposed here (see node_modules/three-globe/dist/three-globe.d.ts) only
- * covers building/positioning layers, not interaction. So picking is done
- * by hand: an invisible hit-target mesh per site, raycast against directly,
- * rather than reaching into three-globe's internal point meshes.
+ * three-globe has no click handling, so picking uses invisible hit spheres.
  */
 export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, renderSiteDetails }) {
   const mountRef = useRef(null);
@@ -168,10 +139,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
     return [...groups.entries()].sort((a, b) => countryLabel(a[0]).localeCompare(countryLabel(b[0])));
   }, [sites]);
 
-  // Re-applies point color/size from current hover + selection state. A
-  // style-only accessor update (not a fresh .pointsData() call), so it's
-  // cheap enough to call on every hover change without re-triggering
-  // three-globe's enter/exit transition system.
+  // Restyle points for hover/selection without rebuilding them.
   const applyPointStyles = useCallback(() => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -190,9 +158,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
       });
   }, []);
 
-  // Updates the floating name tag's text/visibility. Its on-screen position
-  // is recomputed every frame in the animation loop instead (it moves
-  // continuously as the globe rotates), this only decides *what* it shows.
+  // Sets the name tag's text. Its position is updated every frame.
   const refreshLabel = useCallback(() => {
     const active = selectedSiteRef.current ?? hoveredSiteRef.current;
     if (labelRef.current) labelRef.current.textContent = active?.name ?? '';
@@ -218,20 +184,14 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
 
     scene.add(createStarfield(2000, 4000));
 
-    // No point light at the origin here (unlike createBasicLighting, built
-    // for the solar sim's sun-at-origin layout) — the globe itself sits at
-    // the origin, so a co-located point light would light it evenly from
-    // "inside" and flatten the shading. Ambient fill + one offset directional
-    // light gives the globe a lit/unlit day side instead.
+    // No point light: the globe sits at the origin, so it would be lit evenly
+    // from inside. Ambient plus one directional light gives it a day side.
     scene.add(new THREE.AmbientLight(0x9099aa, 2.2));
     const sun = new THREE.DirectionalLight(0xffffff, 0.6);
     sun.position.set(300, 200, 300);
     scene.add(sun);
 
-    // NASA Blue Marble, 4096x2048 — bundled with the three-globe package
-    // itself (node_modules/three-globe/example/img/), copied into public/
-    // rather than the small ~70KB placeholder used at planet-scale in the
-    // solar sim, which was too low-res to hold up at globe zoom distances.
+    // NASA Blue Marble 4096x2048 (from three-globe's examples).
     const globe = new ThreeGlobe().globeImageUrl('/textures/earth-blue-marble.jpg');
     scene.add(globe);
     globeRef.current = globe;
@@ -239,9 +199,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
     const radius = globe.getGlobeRadius();
     camera.position.set(0, 0, radius * 2.5);
 
-    // Same color/scale as Earth's atmosphere in SolarSystemView.jsx's
-    // ATMOSPHERE_CONFIG, so this reads as the same Earth the user just saw
-    // in /solarsim rather than a differently-styled one.
+    // Matches Earth's atmosphere in /solarsim.
     scene.add(createAtmosphereGlow(radius, 0x4488ff, { scale: 1.2, opacity: 0.38 }));
     scene.add(createPlanetHalo(radius, 0x4488ff, { scale: 3.0, opacity: 0.28 }));
 
@@ -253,10 +211,8 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
 
     const cleanupResize = setupResizeHandler(camera, renderer, mountNode);
 
-    // ── Picking ────────────────────────────────────────────────────────────
-    // One invisible sphere per site, positioned via the globe's own
-    // lat/lng → Cartesian conversion so hit-testing always matches whatever
-    // the points layer is actually showing.
+    // Picking: one invisible hit sphere per site, placed with the globe's own
+    // lat/lng conversion so it always lines up.
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
 
@@ -333,9 +289,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
     };
   }, [applyPointStyles, refreshLabel]); // eslint-disable-line react-hooks/exhaustive-deps -- mount once, mirrors SolarSystemView.jsx
 
-  // Points + rings + hit targets are rebuilt whenever the site list changes
-  // (the upcoming feed refreshes periodically), independent of the one-time
-  // scene setup above.
+  // Rebuild points, rings, and hit targets when the site list changes.
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
@@ -347,9 +301,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
       .pointAltitude(0.015);
     applyPointStyles();
 
-    // Ambient "radar ping" pulse at every site — the single biggest lever
-    // for making a field of small static dots read as a *live* tracker
-    // rather than a scatter plot. Same terminal green as the points.
+    // Pulsing rings so the map reads as live.
     globe
       .ringsData(sites)
       .ringColor(() => (t) => `rgba(0, 255, 157, ${(1 - t) * 0.55})`)
@@ -357,9 +309,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
       .ringPropagationSpeed(2.2)
       .ringRepeatPeriod(2200);
 
-    // Drop the previous hit targets before building new ones — they aren't
-    // part of the scene graph traversal cleanup above (that only runs on
-    // unmount), so they'd otherwise accumulate across every site-list update.
+    // Remove old hit targets so they don't pile up across updates.
     hitTargetsRef.current.forEach((mesh) => {
       mesh.geometry.dispose();
       mesh.material.dispose();
@@ -370,9 +320,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
     const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
     hitTargetsRef.current = sites.map((site) => {
       const { x, y, z } = globe.getCoords(site.lat, site.lng, 0.02);
-      // Sized generously (well beyond the visible point) rather than to
-      // match it exactly — a launch site should be easy to hit on a globe
-      // you're also trying to drag around, especially on touch.
+      // Bigger than the visible point so it's easy to tap.
       const hitGeometry = new THREE.SphereGeometry(radius * 0.06, 8, 8);
       const mesh = new THREE.Mesh(hitGeometry, hitMaterial);
       mesh.position.set(x, y, z);
@@ -382,11 +330,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
     });
   }, [sites, applyPointStyles]);
 
-  // Selection changes (drawer open/close/switch, including hopping via the
-  // HUD's prev/next/dropdown controls) restyle the affected points, update
-  // the floating label, and — for a newly selected site — rotate the camera
-  // to bring it into view. "Hop to a site" should actually show you the
-  // site, not just open its drawer.
+  // On selection: restyle points, update the label, and fly to the new site.
   useEffect(() => {
     selectedKeyRef.current = selectedSite?.key ?? null;
     applyPointStyles();
@@ -434,21 +378,14 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
     if (controls.isPointerDown) {
       idleSinceRef.current = 0;
     } else if (pausedRef.current) {
-      // A site is selected and its info panel is open: hold completely
-      // still rather than spin behind it. Reset the idle clock too, so
-      // closing the panel gives a fresh IDLE_DELAY_MS pause instead of
-      // immediately resuming mid-motion.
+      // Hold still while a panel is open, and restart the idle delay on close.
       idleSinceRef.current = 0;
       controls.sphericalDelta.theta = 0;
       controls.sphericalDelta.phi = 0;
     } else {
       idleSinceRef.current += deltaTime;
-      // Assign, don't accumulate: update() re-derives `spherical` from the
-      // camera's actual position every frame, applies `sphericalDelta` once,
-      // then decays it by the damping factor for next frame. Adding to it
-      // here on top of that decay compounds into a steady-state ~20x faster
-      // than intended (1 / dampingFactor) — this sets a fresh, correctly
-      // scaled delta each frame instead of feeding that decay loop.
+      // Assign, don't add: OrbitControls already decays sphericalDelta each
+      // frame, so adding to it compounds the speed (about 20x).
       if (!prefersReducedMotionRef.current && idleSinceRef.current > IDLE_DELAY_MS) {
         controls.sphericalDelta.theta = -IDLE_SPIN_RAD_PER_SEC * dt;
       }
@@ -572,7 +509,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
         />
       </Flex>
 
-      {/* Site info panel — docked to this component's own canvas rather than
+      {/* Site info panel: docked to this component's own canvas rather than
           a page-level Drawer, so it reads as part of the 3D view: it slides
           in from the globe's own right edge at the same moment the camera
           flight (in the selection effect above) rotates that site into

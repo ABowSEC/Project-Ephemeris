@@ -3,12 +3,8 @@ import Card from '../Card';
 import type { LaunchDetailed } from '../../types/launchLibrary';
 
 /**
- * Context numbers from the detailed payload — how many times this provider,
- * pad, and site have flown, and how quickly the pad turned around.
- *
- * Every field is optional and several are routinely null, so the grid renders
- * only what exists and the whole block disappears when nothing does. Showing
- * "Pad turnaround: —" is worse than showing nothing.
+ * Launch counts for the provider, pad, and site, plus pad turnaround. Shows
+ * only the fields that exist, and nothing at all if none do.
  */
 export default function LaunchStats({ launch }: { launch: LaunchDetailed }) {
   const stats = [

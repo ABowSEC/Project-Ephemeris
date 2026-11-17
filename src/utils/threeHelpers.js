@@ -1,12 +1,6 @@
 import * as THREE from 'three';
 
-/**
- * Creates a procedural ring texture for Saturn, Uranus, or Neptune.
- * @param {string} type - 'saturn', 'uranus', or 'neptune'
- * @param {number} innerRadius
- * @param {number} outerRadius
- * @returns {THREE.Texture}
- */
+/** Procedural ring texture. `type` is 'saturn', 'uranus', or 'neptune'. */
 export function createRingTexture(type, innerRadius, outerRadius) {
   const canvas = document.createElement('canvas');
   const size = 512;
@@ -129,13 +123,7 @@ export function createRingTexture(type, innerRadius, outerRadius) {
   return texture;
 }
 
-/**
- * Creates an inclined orbit ellipse as a THREE.Line.
- * @param {number} a - semi-major axis
- * @param {number} b - semi-minor axis
- * @param {number} inclination - degrees
- * @returns {THREE.Line}
- */
+/** Orbit ellipse line. `a`/`b` are the semi-axes, inclination in degrees. */
 export function createOrbitEllipse(a, b, inclination) {
   const curve = new THREE.EllipseCurve(0, 0, a, b, 0, 2 * Math.PI, false, 0);
   const points = curve.getPoints(100);
@@ -162,9 +150,7 @@ const ATMOSPHERE_VERTEX_SHADER = /* glsl */ `
   }
 `;
 
-// Fresnel rim glow: intensity peaks where the shell is edge-on to the camera
-// (the planet's limb) and falls off toward the centre and the outer edge,
-// so the atmosphere reads as scattered light rather than a flat halo.
+// Fresnel rim: brightest at the planet's edge, fading inward and outward.
 const ATMOSPHERE_FRAGMENT_SHADER = /* glsl */ `
   uniform vec3  uColor;
   uniform float uIntensity;
@@ -181,16 +167,8 @@ const ATMOSPHERE_FRAGMENT_SHADER = /* glsl */ `
 `;
 
 /**
- * Creates a Fresnel-based atmosphere glow shell around a planet. The glow is
- * concentrated on the limb and view-dependent, avoiding the flat "sticker"
- * look of a uniform-opacity halo.
- * @param {number} planetRadius - The planet's geometry radius
- * @param {number} color - Hex color for the atmosphere (e.g. 0x4488ff)
- * @param {Object} options
- * @param {number} options.scale - How much larger than the planet (default 1.18)
- * @param {number} options.opacity - Peak rim intensity (default 0.35)
- * @param {number} options.power - Falloff sharpness; higher = tighter rim (default 3.0)
- * @returns {THREE.Mesh}
+ * Fresnel atmosphere shell around a planet.
+ * Options: scale (default 1.18), opacity (0.35), power (3.0, higher = tighter rim).
  */
 export function createAtmosphereGlow(planetRadius, color, options = {}) {
   const { scale = 1.18, opacity = 0.35, power = 3.0 } = options;
@@ -213,11 +191,7 @@ export function createAtmosphereGlow(planetRadius, color, options = {}) {
   return mesh;
 }
 
-/**
- * Builds a white radial-gradient texture (bright centre → transparent edge)
- * for additive sprite glows. Tint it via the sprite material's `color`.
- * @returns {THREE.CanvasTexture}
- */
+/** White radial gradient for glow sprites. Tint with the material color. */
 function createGlowSpriteTexture() {
   const size = 128;
   const canvas = document.createElement('canvas');
@@ -235,15 +209,8 @@ function createGlowSpriteTexture() {
 }
 
 /**
- * Creates a subtle camera-facing halo sprite around a planet — the soft outer
- * bloom that complements the Fresnel rim atmosphere. The planet disc occludes
- * the bright centre (depthTest on), leaving a glow that hugs the limb.
- * @param {number} planetRadius - The planet's geometry radius
- * @param {number} color - Hex tint for the halo (e.g. 0x4488ff)
- * @param {Object} options
- * @param {number} options.scale - Halo diameter as a multiple of radius (default 3.0)
- * @param {number} options.opacity - Halo strength (default 0.3)
- * @returns {THREE.Sprite}
+ * Soft halo sprite around a planet, complementing the atmosphere rim.
+ * Options: scale (default 3.0), opacity (0.3).
  */
 export function createPlanetHalo(planetRadius, color, options = {}) {
   const { scale = 3.0, opacity = 0.3 } = options;

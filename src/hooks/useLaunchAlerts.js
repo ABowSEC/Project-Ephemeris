@@ -4,10 +4,8 @@ import { getUpcomingLaunches } from '../services/launchStore';
 import { readFavorites } from './useFavorites';
 import { launchPath, launchTime as launchTimeOf } from '../utils/launchFields';
 
-// Countdown alerts for tracked launches. While the app (or installed PWA)
-// is open, a periodic check compares each tracked launch's time against
-// alert thresholds and fires a system notification plus an in-app toast.
-// Fired alerts are recorded in localStorage so refreshes don't repeat them.
+// Countdown alerts for tracked launches while the app is open: a system
+// notification plus a toast. Fired alerts are saved so reloads don't repeat them.
 
 const PREF_KEY = 'ephemeris.alertsEnabled.v1';
 const FIRED_KEY = 'ephemeris.alertsFired.v1';

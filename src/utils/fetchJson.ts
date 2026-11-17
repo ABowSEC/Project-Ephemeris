@@ -29,7 +29,7 @@ export interface FetchJsonOptions {
 }
 
 /**
- * fetchJson, plus the response headers — for callers that need metadata the
+ * fetchJson, plus the response headers, for callers that need metadata the
  * body doesn't carry, like the proxy's x-fetched-at.
  */
 export async function fetchJsonWithHeaders<T = unknown>(

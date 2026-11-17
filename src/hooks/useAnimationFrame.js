@@ -1,10 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 
-/**
- * Custom hook for running animation frames with proper cleanup.
- * @param {Function} callback - Function to call on each animation frame
- * @param {boolean} isActive - Whether the animation should be running
- */
+/** Calls `callback` every animation frame while `isActive`. */
 export function useAnimationFrame(callback, isActive = true) {
   const requestRef = useRef();
   const previousTimeRef = useRef();

@@ -8,24 +8,17 @@ export interface LaunchHeroProps {
    * hard-cut against the image; the single-launch hero doesn't need one. */
   bottomVignette?: boolean;
   /** Badge/label row above the heading (status badge, program badges, a
-   * pulsing "Next Launch" indicator — genuinely different per page). */
+   * pulsing "Next Launch" indicator, genuinely different per page). */
   eyebrow: ReactNode;
   /** The mission name, or whatever a caller wants as the H1's content
    * (LaunchPage conditionally renders a loading state / linked title here). */
   heading: ReactNode;
   metaLine?: ReactNode;
-  /** Right-side "Time to Launch" panel's content — a countdown, a spinner, or nothing. */
+  /** Right-side "Time to Launch" panel's content: a countdown, a spinner, or nothing. */
   countdown: ReactNode;
 }
 
-/**
- * The image-backed hero shared by /launches and /launches/:slug: background
- * mission image, dark gradient for legibility, and a two-column layout
- * (mission info left, countdown right). The two pages' actual content
- * (what badges show, what the heading says, whether there's a countdown to
- * show yet) differs enough to stay page-owned — this is just the shell that
- * used to be copied wholesale between them.
- */
+/** Image-backed hero shared by /launches and /launches/:slug. Pages supply the content. */
 export default function LaunchHero({
   image,
   bottomVignette = false,
@@ -108,15 +101,9 @@ export default function LaunchHero({
 }
 
 /**
- * A launch name that wraps at its " | " separator. Launch Library names are
- * "Rocket | Mission" ("Falcon 9 Block 5 | USSF-481"); left to the browser, a
- * large heading breaks wherever the first line fills, splitting "Block 5" or
- * a designator at its hyphen. Each half is an inline-block, so a line break
- * falls between them first, and inside one only when it alone is too wide.
- *
- * `clamped` is for text under a line clamp (noOfLines): an inline-block is
- * atomic, so the clamp can't cut inside it and adds lines instead. There only
- * the rocket half is held together; the mission flows normally and truncates.
+ * Launch name that wraps at " | " instead of mid-word ("Falcon 9 Block 5 |
+ * USSF-481"). With `clamped`, only the rocket half is held together so a line
+ * clamp can still truncate.
  */
 export function LaunchName({ name, clamped = false }: { name: string; clamped?: boolean }) {
   const parts = name.split(' | ');
@@ -137,10 +124,8 @@ export function LaunchName({ name, clamped = false }: { name: string; clamped?: 
 }
 
 /**
- * Keeps hyphenated words ("USSF-481", "15-15", "Mid-Inclination") whole, so a
- * line only breaks at a space. A non-breaking hyphen (U+2011) would be
- * simpler, but Plex has no glyph for it and the fallback font's sits low.
- * Plain nowrap spans stay inline, so a surrounding line clamp still works.
+ * Keeps hyphenated words like "USSF-481" whole. (A non-breaking hyphen would
+ * be simpler, but Plex has no glyph for it.)
  */
 function NoHyphenBreaks({ text }: { text: string }) {
   return (

@@ -1,9 +1,6 @@
 // Planet data for the solar system visualization
 
-/**
- * Enhanced orbit data with realistic parameters - increased distances
- * @type {Object}
- */
+/** Orbit parameters per planet (distances scaled up for visibility). */
 export const planetOrbitData = {
   Mercury: {
     a: 8, b: 7.8, period: 88, inclination: 7,
@@ -43,10 +40,7 @@ export const planetOrbitData = {
   },
 };
 
-/**
- * Planet data for the selector UI and info panel
- * @type {Object}
- */
+/** Planet info for the selector and info panel. */
 export const planetData = {
   Mercury: {
     texture: 'textures/mercury.jpg',
@@ -149,25 +143,12 @@ export const planetData = {
   },
 };
 
-/**
- * Get planet names as an array
- * @returns {string[]}
- */
 export const getPlanetNames = () => Object.keys(planetOrbitData);
 
-/**
- * Get planet data by name
- * @param {string} planetName
- * @returns {Object|null}
- */
 export const getPlanetData = (planetName) => {
   return planetOrbitData[planetName] || null;
 };
 
-/**
- * Get planets with rings
- * @returns {string[]}
- */
 export const getPlanetsWithRings = () => {
   return Object.entries(planetOrbitData).filter(([, data]) => data.hasRings).map(([name]) => name);
 };

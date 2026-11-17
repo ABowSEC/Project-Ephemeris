@@ -10,18 +10,15 @@ import { hasFlown } from '../data/launchStatus';
 import { launchDate } from '../utils/launchFields';
 import type { LaunchListItem } from '../types/launchLibrary';
 
-// The scheduled refresh keeps the feed well under an hour old, so data this
-// old means refreshes have been failing for days. Past this age the UI warns
-// outright instead of just showing when the data was last updated.
+// Data this old means refreshes have failed for days, so warn outright.
 export const STALE_WARNING_MS = 3 * 24 * 60 * 60 * 1000;
 
 // Older than a normal refresh cycle, but nowhere near STALE_WARNING_MS: the
 // point past which a launch's status in the feed can't be taken at face value.
 const OLD_DATA_MS = 45 * 60 * 1000;
 
-// In old data, a launch still marked Go this long after its T-0 almost
-// certainly flew or slipped; the feed just hasn't said which yet. Fresh data
-// is trusted as-is, since a launch can sit in a hold past T-0 for real.
+// In stale data, treat a launch still "Go" this long past T-0 as already
+// flown or slipped. Fresh data is trusted, since holds past T-0 happen.
 const PAST_T0_GRACE_MS = 2 * 60 * 60 * 1000;
 
 export interface UpcomingLaunchesResult {
@@ -35,18 +32,9 @@ export interface UpcomingLaunchesResult {
   fetchedAt: number | null;
 }
 
-/**
- * React hook over the shared launch store: returns the upcoming launches
- * and quietly re-checks on an interval aligned with the store's TTL, and
- * whenever the visitor comes back to the tab. However many components mount
- * this, they all show one snapshot, and the app still makes at most one
- * network request per freshness window.
- */
+/** Upcoming launches from the shared store, rechecked on a timer and when the tab regains focus. */
 export function useUpcomingLaunches(): UpcomingLaunchesResult {
-  // useApi drives the request lifecycle (loading, error, refetch); the data
-  // itself comes from the store's snapshot, so a fetch any component makes
-  // updates every component. The abort signal is unused because the store
-  // manages its own request; useApi still guards state after unmount.
+  // useApi handles loading/error; the data comes from the store snapshot.
   const { loading, error, refetch } = useApi<unknown>(
     (_signal, { force } = {}) => getUpcomingLaunches({ force: Boolean(force) })
   );
@@ -57,13 +45,7 @@ export function useUpcomingLaunches(): UpcomingLaunchesResult {
   const age = fetchedAt != null ? Date.now() - fetchedAt : 0;
   const stale = age > STALE_WARNING_MS;
 
-  // The feed is sorted by T-0 ascending, but its first entry isn't
-  // necessarily what should be highlighted as "next": once a launch's
-  // status has resolved to a terminal one (Success/Failure/Partial
-  // Failure), it has already flown, and the upstream feed can lag behind
-  // that for a stretch before dropping the entry. Skip past any already-
-  // flown entries so the header/hero always lands on the nearest one still
-  // ahead of us.
+  // Skip launches that already flew; the feed can lag before dropping them.
   const nextLaunch =
     launches.find((launch) => {
       if (hasFlown(launch.status)) return false;
@@ -77,12 +59,8 @@ export function useUpcomingLaunches(): UpcomingLaunchesResult {
     return () => clearInterval(id);
   }, [refetch]);
 
-  // Background tabs, sleeping phones, and back/forward restores throttle or
-  // freeze the interval above, so a visitor returning after hours used to
-  // stare at the old schedule until the next tick happened to fire. Re-check
-  // the moment the page is visible again; the store skips the request when
-  // this browser checked within FRESH_MS, and dedupes the several events a
-  // single return fires (focus + visibilitychange) into one request.
+  // Background tabs throttle timers, so recheck when the page becomes
+  // visible. The store skips the request if its data is still fresh.
   useEffect(() => {
     const revalidate = () => {
       if (document.visibilityState === 'visible') refetch({ background: true });
@@ -99,9 +77,7 @@ export function useUpcomingLaunches(): UpcomingLaunchesResult {
     };
   }, [refetch]);
 
-  // For the manual "refresh" action on the freshness indicator: bypasses the
-  // freshness check so it actually reaches the proxy instead of replaying
-  // the same stale localStorage copy the user is trying to get rid of.
+  // Manual refresh: skip the freshness check.
   const refresh = useCallback(() => refetch({ force: true }), [refetch]);
 
   return {

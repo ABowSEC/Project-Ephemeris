@@ -1,34 +1,18 @@
-// Populates the edge cache after a deploy, before visitors arrive.
+// Warms the edge cache after a deploy so the first visitors don't hit a cold
+// cache and the API's rate limit. Warming from one machine warms every region,
+// since the KV tier is global.
 //
-// The Pages Functions in functions/api cache Space Devs data in two tiers (see
-// functions/_shared/ll2Cache.ts): caches.default per PoP, and the LAUNCHES_CACHE
-// KV namespace globally. Both start empty. A visitor landing on a cold cache
-// goes straight upstream, and upstream is a 15 request/hour free tier — so the
-// first arrivals after a deploy are exactly the ones who get throttled, and
-// with no stale copy to fall back on they get a 502.
-//
-// This script pays that cost itself. It hits the public endpoints, so the
-// requests go through the same cache path a visitor would take; because the
-// KV tier is global, warming from one machine warms every region.
-//
-// Run it after a deploy:
 //   npm run prewarm
 //   npm run prewarm -- --base https://<preview>.pages.dev --limit 12
 //
-// Deliberately never fails the caller. A prewarm is an optimization: a deploy
-// that ships fine but warms slowly is not a broken deploy, and exiting non-zero
-// here would break a CI pipeline over nothing.
+// Never exits non-zero: a slow warm-up isn't a failed deploy.
 
 import { SITE_URL } from '../src/seo/routeMeta.js';
 
-// Warming a slug spends one upstream call, so this is capped well under the
-// hourly budget rather than at the feed's 50. These are the launches actually
-// on screen, and the long tail warms itself on first visit.
+// Each slug costs one API call, so only warm the first few.
 const DEFAULT_LIMIT = 8;
 
-// Spacing between slug requests. The retry/backoff inside the Function already
-// absorbs a single throttled response; pacing keeps us from producing a burst
-// that throttles every attempt at once.
+// Space requests out so they don't all get rate limited at once.
 const DEFAULT_DELAY_MS = 4000;
 
 const FEED_ATTEMPTS = 3;

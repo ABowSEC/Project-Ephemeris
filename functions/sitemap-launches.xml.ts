@@ -1,11 +1,6 @@
-// Pages Function: a sitemap of the launch detail pages.
-//
-// Separate from dist/sitemap.xml (written by scripts/prerender.mjs) because
-// these URLs are not knowable at build time — the set turns over as launches
-// fly and new ones are announced. Both are listed in robots.txt.
-//
-// It reads through the same cache as /api/launches, so serving it costs no
-// upstream request against the 15/hour budget.
+// Sitemap of launch detail pages. Separate from the build-time sitemap.xml
+// because slugs change daily; both are listed in robots.txt. Reads from the
+// same cache as /api/launches, so it costs no API calls.
 
 import { readCached, type Ll2Context } from './_shared/ll2Cache';
 import { upcomingFeedOptions } from './_shared/launchLookup';

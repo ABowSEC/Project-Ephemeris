@@ -1,8 +1,5 @@
-// Single source of truth for per-route SEO metadata. Consumed at runtime by
-// usePageMeta (SPA navigations) and at build time by scripts/prerender.mjs,
-// which stamps these values into a static HTML file per route so crawlers
-// and link-preview bots (Discord, Slack, X) see them without running JS.
-// Keep this file dependency-free: the prerender script imports it from Node.
+// Per-route SEO metadata, used by usePageMeta and scripts/prerender.mjs.
+// Keep it dependency-free: prerender imports it from Node.
 
 export const SITE_NAME = 'Ephemeris';
 export const SITE_URL = 'https://ephemeris-online.com';
@@ -21,10 +18,8 @@ export const routeMeta = {
     description:
       'Every upcoming rocket launch with live countdowns: SpaceX, NASA, ULA, Rocket Lab, and more. Track missions, get alerts, and export launches to your calendar.',
   },
-  // Parameterized: no fixed metadata. Direct visits and crawlers get per-launch
-  // tags from the edge (functions/launches/[slug].ts); usePageMeta takes an
-  // override for SPA navigation. Listed here so the route is documented in one
-  // place with the others — prerender.mjs and the sitemap skip ':' routes.
+  // Metadata comes from the edge function and usePageMeta's override.
+  // Listed for completeness; prerender and the sitemap skip ':' routes.
   '/launches/:slug': {
     title: 'Launch Details',
     description:

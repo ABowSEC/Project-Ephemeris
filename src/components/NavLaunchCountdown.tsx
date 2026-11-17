@@ -54,7 +54,7 @@ export default function NavLaunchCountdown() {
         boxSize="6px"
         rounded="full"
         bg={stale ? 'orange.300' : 'accent.terminal'}
-        // The ping reads as "live" — don't play it over data we can't
+        // The ping reads as "live", so don't play it over data we can't
         // currently confirm is, since that itself would be misleading.
         animation={stale ? undefined : `${ping} 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite`}
         flexShrink={0}

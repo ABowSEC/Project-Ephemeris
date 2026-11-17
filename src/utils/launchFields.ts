@@ -1,27 +1,12 @@
-// Normalizers over the Launch Library payload.
+// Helpers for reading Launch Library payloads. Handles both API versions
+// (v2.2.0 copies linger in caches) and both response modes in one place.
 //
-// Two response modes and two API versions (v2.2.0 payloads linger in caches
-// after the v2.3.0 switch) with different field names and shapes, and a T-0
-// whose precision varies from "to the second" to "sometime this quarter".
-// Every component that reads a launch used to handle those quirks itself —
-// inconsistently. They are handled here instead, once.
-//
-// This file is imported by a Cloudflare Pages Function (functions/launches/
-// [slug].ts) as well as by the browser bundle, so it must stay dependency-free
-// and DOM-free — no `window`/`document`/`localStorage`, no imports beyond
-// types — the same constraint routeMeta.js documents for the same reason.
+// Also imported by functions/launches/[slug].ts, so keep it free of DOM APIs
+// and runtime imports.
 
 import type { AnyLaunch, InfoUrl, LaunchDetailed, VideoUrl } from '../types/launchLibrary';
 
-/**
- * The moment to count down to.
- *
- * The app used to disagree with itself: countdowns keyed off `window_start`
- * while alerts, calendar export, and the map sort used `net`. For a launch
- * with a four-hour window those are four hours apart, so the nav countdown and
- * the notification could differ by most of an afternoon. `net` is the target
- * T-0 and is what everything should use.
- */
+/** The T-0 to count down to. Use this everywhere, not window_start. */
 export function launchTime(launch: AnyLaunch | null | undefined): string | null {
   return launch?.net ?? launch?.window_start ?? null;
 }
@@ -51,12 +36,8 @@ const PRECISION_FORMATS: Record<string, Intl.DateTimeFormatOptions> = {
 };
 
 /**
- * Format the T-0 at the precision upstream actually claims.
- *
- * Rendering "August 14, 2026 at 3:42:07 PM" for a launch only pinned to the
- * month is a lie the data does not support, and it is the kind of lie a
- * launch tracker gets judged on. Vague targets get the "NET" (no earlier than)
- * prefix that the industry uses for exactly this.
+ * Format the T-0 only as precisely as upstream knows it. Vague dates get the
+ * "NET" (no earlier than) prefix.
  */
 export function formatNet(launch: AnyLaunch | null | undefined): string {
   const date = launchDate(launch);
@@ -82,12 +63,7 @@ export function hasPreciseTime(launch: AnyLaunch | null | undefined): boolean {
 
 // ── Webcasts ────────────────────────────────────────────────────────────────
 
-/**
- * All webcast links, best first.
- *
- * v2.2.0's `mode=detailed` called this `vidURLs`; everything else, v2.3.0
- * detailed included, calls it `vid_urls`. Both are read here.
- */
+/** All webcast links, best first. (`vidURLs` in v2.2.0 detailed, else `vid_urls`.) */
 export function webcasts(launch: AnyLaunch | null | undefined): VideoUrl[] {
   if (!launch) return [];
   const list = launch.vid_urls ?? (launch as LaunchDetailed).vidURLs ?? [];
@@ -107,12 +83,8 @@ export interface EmbeddableVideo {
 }
 
 /**
- * Whether a webcast URL can be shown inline.
- *
- * This is a hard constraint, not a preference: the CSP in public/_headers
- * allows frames only from YouTube and Vimeo. Webcasts are frequently hosted
- * elsewhere — x.com broadcasts are common for SpaceX — and those must be
- * rendered as outbound links or the iframe is silently blocked in production.
+ * Embed URL for YouTube/Vimeo, else null. The CSP only allows frames from those
+ * two, so anything else (e.g. x.com) has to be a plain link.
  */
 export function embeddableVideo(url: string | null | undefined): EmbeddableVideo | null {
   if (!url) return null;
@@ -160,7 +132,7 @@ export function padCoordinates(
   return { lat, lon };
 }
 
-/** "Falcon 9 Block 5" — the rocket, however the payload spells it. */
+/** e.g. "Falcon 9 Block 5" */
 export function rocketName(launch: AnyLaunch | null | undefined): string | null {
   const config = launch?.rocket?.configuration;
   return config?.full_name ?? config?.name ?? null;
@@ -183,10 +155,7 @@ export function rocketFamily(launch: AnyLaunch | null | undefined): string | nul
   return config?.families?.[0]?.name ?? config?.family ?? null;
 }
 
-/**
- * ISO 3166-1 alpha-3 code ("USA") for the pad's country: `pad.country` in
- * v2.3.0, `pad.location.country_code` in v2.2.0.
- */
+/** Pad country as ISO alpha-3, e.g. "USA". */
 export function padCountryCode(launch: AnyLaunch | null | undefined): string | null {
   return launch?.pad?.country?.alpha_3_code ?? launch?.pad?.location?.country_code ?? null;
 }
@@ -197,10 +166,7 @@ export function padDescription(launch: AnyLaunch | null | undefined): string | n
   return parts.length ? parts.join(', ') : null;
 }
 
-/**
- * Weather probability, or null when not assessed. Upstream uses -1 as well as
- * null for "no forecast yet", and rendering "-1% favorable" would be absurd.
- */
+/** Weather probability, or null if not forecast yet (upstream also uses -1). */
 export function weatherProbability(launch: AnyLaunch | null | undefined): number | null {
   const probability = (launch as LaunchDetailed | null | undefined)?.probability;
   if (probability == null || probability < 0) return null;
@@ -208,11 +174,7 @@ export function weatherProbability(launch: AnyLaunch | null | undefined): number
 }
 
 // ── SEO text ────────────────────────────────────────────────────────────────
-//
-// The single source of truth for a launch's <title>, meta description, and
-// on-page mission summary — used by both the client (LaunchDetailPage's
-// usePageMeta override) and the edge (functions/launches/[slug].ts's
-// HTMLRewriter), so the two can never drift the way they used to.
+// Shared by the client and the edge function so titles and descriptions match.
 
 const DESCRIPTION_LIMIT = 300;
 
@@ -226,9 +188,7 @@ function truncateWords(text: string, limit: number): string {
 function formatLaunchDateUTC(launch: AnyLaunch): string {
   const iso = launchTime(launch);
   if (!iso) return 'a date to be announced';
-  // Deliberately UTC: buildLaunchDescription/buildMissionSummary feed both the
-  // edge (no meaningful "local" timezone there) and the client, and must agree
-  // with each other regardless of which one renders it first.
+  // UTC so the edge and the client produce the same text
   return new Date(iso).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -237,13 +197,7 @@ function formatLaunchDateUTC(launch: AnyLaunch): string {
   });
 }
 
-/**
- * The payload/mission side of an LL2 name, when it has one.
- *
- * LL2 names are conventionally "{Rocket} | {Payload}" (e.g. "GSLV Mk II |
- * GISAT-1A"). Leading with the payload is what a searcher actually typed —
- * nobody googles "GSLV Mk II", they google the satellite or mission name.
- */
+/** The payload half of "{Rocket} | {Payload}", e.g. "GISAT-1A". */
 function missionSideOfName(launch: AnyLaunch): string | null {
   const raw = launch?.name;
   if (!raw) return null;
@@ -251,32 +205,18 @@ function missionSideOfName(launch: AnyLaunch): string | null {
   return parts.length >= 2 ? parts[1] : null;
 }
 
-/**
- * The name to lead with anywhere a launch is identified to a reader or a
- * search engine: the mission's own name when there is one, else the payload
- * side of the LL2 name, else the raw name. Used for the page's H1, its SEO
- * title, breadcrumbs, and Related Launches — one definition of "what this
- * launch is called" instead of each call site picking its own fallback chain.
- */
+/** Display name: mission name, else the payload half of the name, else the raw name. */
 export function missionDisplayName(launch: AnyLaunch | null | undefined): string {
   if (!launch) return 'Launch Details';
   return launch.mission?.name?.trim() || missionSideOfName(launch) || launch.name;
 }
 
-/**
- * SEO title fragment for a launch page — everything before the " · Ephemeris"
- * suffix, which callers (usePageMeta, the edge function) append themselves.
- */
+/** Page title without the " · Ephemeris" suffix. */
 export function buildLaunchTitle(launch: AnyLaunch | null | undefined): string {
   return `${missionDisplayName(launch)} Launch Date & Mission Details`;
 }
 
-/**
- * One meta-description-length sentence: the mission's own description when
- * present, otherwise assembled from provider/rocket/pad/date. Shared by the
- * edge (og:description, twitter:description) and the client (usePageMeta) so
- * a link shared before hydration and one shared after never disagree.
- */
+/** Meta description: the mission description, or one built from provider/rocket/pad/date. */
 export function buildLaunchDescription(launch: AnyLaunch | null | undefined): string {
   if (!launch) {
     return 'Live countdown, official webcast, and mission updates for an upcoming rocket launch.';
@@ -300,22 +240,15 @@ export function buildLaunchDescription(launch: AnyLaunch | null | undefined): st
   return truncateWords(parts.join(' '), DESCRIPTION_LIMIT);
 }
 
-/** True once the launch has flown, whatever the outcome — string-based so this
- * file doesn't need to import data/launchStatus.ts for one boolean. */
+/** True once the launch has flown, whatever the outcome. */
 function hasFlownName(statusName: string | null | undefined): boolean {
   return statusName === 'Launch Successful' || /failure/i.test(statusName ?? '');
 }
 
 /**
- * A short mission-overview paragraph for the page body (not meta tags).
- *
- * Real `mission.description` is used verbatim when it's already substantial
- * enough to read as a paragraph; otherwise one is synthesized from whatever
- * fields exist, so a launch with almost no editorial content still gets real,
- * non-boilerplate text instead of a thin page. The ~100-250 word target is a
- * ceiling on real descriptions, not a floor to pad thin ones toward — a launch
- * with nothing but a TBD name and no date does not have 100 honest words in
- * it, and filler text would hurt more than a short, accurate paragraph.
+ * Mission overview paragraph for the page body. Uses the real description when
+ * it's long enough, otherwise builds a short one from the fields we have.
+ * Doesn't pad thin launches with filler.
  */
 export function buildMissionSummary(launch: AnyLaunch | null | undefined): string {
   if (!launch) return '';
@@ -324,8 +257,7 @@ export function buildMissionSummary(launch: AnyLaunch | null | undefined): strin
   const wordCount = (s: string) => s.split(/\s+/).filter(Boolean).length;
 
   if (description && wordCount(description) >= 40) {
-    // ~250 words at a rough 6.4 chars/word average; caps an editorial blurb
-    // rather than letting a multi-paragraph LL2 description run unbounded.
+    // About 250 words
     return truncateWords(description, 1600);
   }
 
@@ -354,12 +286,11 @@ export function buildMissionSummary(launch: AnyLaunch | null | undefined): strin
   if (orbit) {
     sentences.push(`The mission is targeting ${orbit} orbit.`);
   } else if (description) {
-    // A real description exists but was just under the 40-word bar above —
-    // fold it in rather than discard it.
+    // Too short to stand alone, but still worth including
     sentences.push(description);
   }
 
-  // `program` only exists on the detailed payload, not the list/feed shape.
+  // Detailed payload only
   const program = (launch as LaunchDetailed).program?.[0]?.name;
   if (program) {
     sentences.push(`It is part of the ${program} program.`);

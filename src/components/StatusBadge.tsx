@@ -2,10 +2,7 @@ import { Badge, Box, type BadgeProps, type BoxProps } from '@chakra-ui/react';
 import { statusStyle } from '../data/launchStatus';
 import type { LaunchStatus } from '../types/launchLibrary';
 
-// Each size mirrors an exact padding/fontSize combo that used to be
-// hand-copied at its one call site — kept as presets rather than free-form
-// props so new call sites pick one of four known-good sizes instead of
-// inventing a fifth.
+// Fixed size presets so call sites stay consistent.
 const SIZES = {
   /** LaunchPage's nav-adjacent status pill. */
   xs: { fontSize: '10px', px: 2, py: 0.5 },
@@ -34,7 +31,7 @@ export default function StatusBadge({ status, label, size = 'md', ...props }: St
   );
 }
 
-/** The map/list dot variant — a colored circle with the status as its tooltip, no text. */
+/** The map/list dot variant: a colored circle with the status as its tooltip, no text. */
 export function StatusDot({
   status,
   ...props

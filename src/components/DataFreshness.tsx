@@ -25,13 +25,8 @@ interface DataFreshnessProps extends StackProps {
 }
 
 /**
- * Shows when the launch data was last updated, escalating with its age: a
- * quiet gray timestamp normally, amber with a Refresh link once it's a day
- * old, and an outright warning past STALE_WARNING_MS. Renders nothing until
- * there's data, so call sites can drop it in unconditionally.
- *
- * `fetchedAt` comes from useUpcomingLaunches, so a successful refresh moves
- * it and the indicator settles back to gray on the next render.
+ * When the launch data was last updated: gray normally, amber with a Refresh
+ * link after a day, a warning past STALE_WARNING_MS. Renders nothing without data.
  */
 export default function DataFreshness({ fetchedAt, onRefresh, ...props }: DataFreshnessProps) {
   const [refreshing, setRefreshing] = useState(false);

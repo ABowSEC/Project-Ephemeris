@@ -7,9 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // public/ also holds large three.js textures and skyboxes; precaching
-      // is limited to the app shell and icons, with everything else cached
-      // at runtime on first use.
+      // Only precache the app shell and icons. Big textures cache on first use.
       workbox: {
         // Custom worker code the generateSW template has no hook for. Right
         // now: making launch-alert notifications open the launch they are about.
@@ -18,18 +16,13 @@ export default defineConfig({
         // public/icons are ~1 MB each and cached at runtime instead
         globPatterns: ['**/*.{js,css,html}', 'icons/icon-*.png', 'icons/apple-touch-icon.png', '*.svg'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        // Static files served straight from Cloudflare (sitemaps, robots.txt,
-        // the edge API) are not app routes. Without this, generateSW's default
-        // navigateFallback catches any browser navigation to them and serves
-        // index.html instead, so the SPA's catch-all route renders "Page Not
-        // Found" in place of the real XML/text response.
+        // Let these load from the server instead of being answered with the SPA
+        // shell by the service worker.
         navigateFallbackDenylist: [/^\/sitemap.*\.xml$/, /^\/robots\.txt$/, /^\/api\//],
         runtimeCaching: [
           {
-            // Launch data (direct API or our /api/launches edge proxy):
-            // prefer fresh, fall back to cache when offline. The timeout sits
-            // above the app's own 12s, so a slow-but-successful answer reaches
-            // the app instead of being pre-empted by this cache's older copy.
+            // Launch data: network first, cache when offline. Timeout is above the
+            // app's 12s so slow responses still win.
             urlPattern: ({ url }) =>
               url.hostname === 'll.thespacedevs.com' ||
               (url.origin === self.location.origin && url.pathname === '/api/launches'),

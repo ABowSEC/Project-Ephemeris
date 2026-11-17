@@ -1,18 +1,12 @@
-// Astronomy Picture of the Day.
-//
-// NASA retired api.nasa.gov/planetary/apod in September 2026 (shutdown
-// December 1, 2026) in favor of a WordPress endpoint on science.nasa.gov.
-// No API key is needed. The new response differs in ways that matter here:
-//   - It is an array of recent entries, newest first; ?date= is ignored.
-//   - `url` is the APOD article page, not the media. The image is `hdurl`.
-//   - Videos carry no video URL at all: `hdurl` is a still frame, and the
-//     actual <video>/<iframe> source only appears inside `basic_html`.
-//   - explanation, credit and copyright are HTML, and the explanation ends
-//     with a site-news / "Tomorrow's picture" footer.
-//   - copyright is always filled (it mirrors credit), even for NASA-owned
-//     images, so it no longer signals public-domain status.
-// normalizeApod maps an entry back to the old field names the UI was built
-// on, with `url` meaning "the media to render" again.
+// Astronomy Picture of the Day, from science.nasa.gov (the old api.nasa.gov
+// endpoint shut down in Dec 2026). No API key needed. Differences from the
+// old API:
+//   - Returns an array of recent entries, newest first; ?date= is ignored.
+//   - `url` is the article page; the image is `hdurl`.
+//   - Videos have no video URL; the source is only inside `basic_html`.
+//   - Text fields are HTML, and the explanation ends with a site footer.
+//   - copyright is always filled, so it doesn't mean "not public domain".
+// normalizeApod maps entries back to the old field names.
 
 import { fetchJson } from '../utils/fetchJson';
 
@@ -20,14 +14,12 @@ const APOD_URL =
   'https://science.nasa.gov/wp-json/wp/v2/apod-basic/?per_page=1' +
   '&_fields=date,title,permalink,media_type,explanation,copyright,alt,hdurl,basic_html';
 
-// The longest edge we ask for. hdurl is the full original (6750x9000 and
-// several MB is not unusual), far more than a card or even the fullscreen
-// viewer can show; hdurl itself is kept for "Open original".
+// Display size. hdurl can be huge (9000px, several MB); it's still used
+// for "Open original".
 const DISPLAY_EDGE = 1600;
 
-// hdurl points at NASA's dynamicimage resizer, whose w/h params are a
-// bounding box (fit=clip keeps the aspect ratio). Shrink the box to the
-// display size; leave anything else, or anything already smaller, alone.
+// Shrink NASA's resizer bounding box (w/h) to the display size. Leaves other
+// URLs, or ones already smaller, alone.
 function displaySized(url) {
   if (!url) return url;
   try {

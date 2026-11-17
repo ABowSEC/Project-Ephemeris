@@ -6,14 +6,8 @@ import StatusBadge from '../StatusBadge';
 import type { AnyLaunch } from '../../types/launchLibrary';
 
 /**
- * The mission-control countdown, lifted out of LaunchPage so the detail page
- * shows exactly the same clock rather than a third implementation of it.
- * (There were two before this: the useCountdown hook and a hand-rolled
- * setInterval inside LaunchFeed's card.)
- *
- * It also refuses to tick when the T-0 is not real. A launch pinned only to a
- * month gets a "NET August 2026" line instead of a to-the-second clock that
- * implies a precision the data does not have.
+ * Mission-control countdown, shared by the launches and detail pages. Shows a
+ * "NET" date instead of a ticking clock when the T-0 isn't precise.
  */
 export default function CountdownDisplay({
   launch,

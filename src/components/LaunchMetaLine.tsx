@@ -4,7 +4,7 @@ import { FaMapMarkerAlt, FaSatellite } from 'react-icons/fa';
 export interface LaunchMetaLineProps {
   provider?: string | null;
   rocket?: string | null;
-  /** Pre-formatted pad/site text — callers vary on how much detail to include
+  /** Pre-formatted pad/site text: callers vary on how much detail to include
    * (full pad description vs. just the site name), so this takes the string
    * directly rather than a launch object. */
   pad?: string | null;
@@ -12,7 +12,7 @@ export interface LaunchMetaLineProps {
   net: string;
 }
 
-/** Provider · rocket / pad / NET — the summary line under a mission heading. */
+/** Provider · rocket / pad / NET: the summary line under a mission heading. */
 export default function LaunchMetaLine({ provider, rocket, pad, net }: LaunchMetaLineProps) {
   return (
     <VStack align={{ base: 'center', lg: 'start' }} spacing={1.5}>

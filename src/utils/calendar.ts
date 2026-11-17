@@ -24,10 +24,8 @@ interface CalendarTiming {
 }
 
 /**
- * When the event goes in the calendar, or null when it can't honestly go in
- * at all. A firm T-0 gets a timed event; a launch known only to the day gets
- * an all-day event; anything vaguer (month, quarter, year) or with no date
- * gets nothing, rather than an event at a time the data doesn't support.
+ * Calendar timing: a timed event for a firm T-0, all-day if only the day is
+ * known, null if vaguer.
  */
 function launchTiming(launch: AnyLaunch): CalendarTiming | null {
   const date = launchDate(launch);
@@ -74,10 +72,7 @@ function launchLocation(launch: AnyLaunch): string {
   return [launch.pad?.name, launch.pad?.location?.name].filter(Boolean).join(', ');
 }
 
-/**
- * Prefilled Google Calendar "create event" URL for a launch, or null when
- * the date is too vague (see canAddToCalendar).
- */
+/** Prefilled Google Calendar link, or null if the date is too vague. */
 export function googleCalendarUrl(launch: AnyLaunch): string | null {
   const timing = launchTiming(launch);
   if (!timing) return null;

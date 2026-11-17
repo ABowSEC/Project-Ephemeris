@@ -35,17 +35,10 @@ import { withAlpha } from '../utils/color';
 const MotionBox = motion(Box);
 const MotionImage = motion(Image);
 
-// How many cards to show before the "show more" button. The feed holds 50, and
-// rendering all of them on a phone is a lot of images for a list most people
-// scan the top of.
+// Cards shown before "show more". Fewer images to load on phones.
 const PAGE_SIZE = 12;
 
-/**
- * Compact T-minus line for a card, with the date beneath it. Once there is
- * nothing to count down to, the date alone takes the countdown's place, so
- * a card never prints the same date twice. The full clock lives on the
- * detail page.
- */
+/** T-minus line with the date below, or just the date once there's nothing to count down to. */
 function CardTiming({ launch }: { launch: LaunchListItem }) {
   const countdown = useLaunchCountdown(launch);
 
@@ -74,14 +67,7 @@ function CardTiming({ launch }: { launch: LaunchListItem }) {
   );
 }
 
-/**
- * One launch in the list.
- *
- * The card used to expand in place to reveal mission details, calendar links,
- * and a webcast button. All of that now lives at /launches/<slug>, which is
- * linkable, shareable, and previews properly when posted — so the card's only
- * job is to identify the launch and get you there.
- */
+/** One launch in the list. Details live on /launches/<slug>. */
 interface LaunchCardProps {
   launch: LaunchListItem;
   index?: number;
@@ -96,9 +82,8 @@ function LaunchCard({ launch, index = 0, reduceMotion = false }: LaunchCardProps
     <LinkBox
       as={MotionBox}
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 28 }}
-      // Transitions ride on each target: a top-level transition prop collides
-      // with Chakra's CSS transition prop, and it also gave the hover lift
-      // the reveal's stagger delay
+      // Transition goes on each target: a top-level prop clashes with Chakra's
+      // and would give the hover lift the reveal delay.
       whileInView={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut', delay: (index % 2) * 0.08 } }}
       viewport={{ once: true, margin: '-60px' }}
       whileHover={reduceMotion ? undefined : { y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
