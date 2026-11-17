@@ -1,18 +1,17 @@
 // Post-build SEO stamping. Runs after `vite build` (see the build script in
 // package.json) and, for every route in routeMeta, writes a copy of
-// dist/index.html at dist/<route>/index.html with that route's title,
+// dist/index.html at dist/<route>.html with that route's title,
 // description, og tags, and canonical URL baked in. Cloudflare Pages serves
 // a static file when one matches the path, so crawlers and link-preview bots
 // get route-specific metadata without executing JS; the SPA hydrates on top
-// as usual. Also emits dist/404.html (served with status 404 for unknown
-// paths) and dist/sitemap.xml for the non-hidden routes.
+// as usual. Also emits dist/404.html and dist/sitemap.xml.
 //
 // This is metadata prerendering only: the page body is still rendered
 // client-side. Full HTML prerendering would need the APIs' live data and is
 // not worth the fragility for a site whose content changes hourly.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { SITE_NAME, SITE_URL, routeMeta } from '../src/seo/routeMeta.js';
 
 const dist = resolve(process.cwd(), 'dist');
@@ -107,19 +106,16 @@ for (const [route, meta] of Object.entries(routeMeta)) {
   }
   html = replaceTag(html, /<\/head>/, `${headExtras}\n  </head>`, '</head>', route);
 
-  const outDir = route === '/' ? dist : join(dist, route.slice(1));
-  mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, 'index.html'), html);
+  // launches.html, not launches/index.html: Pages serves the latter only at
+  // /launches/, but our canonicals and links use /launches.
+  const outFile = route === '/' ? join(dist, 'index.html') : join(dist, `${route.slice(1)}.html`);
+  mkdirSync(dirname(outFile), { recursive: true });
+  writeFileSync(outFile, html);
   count += 1;
 }
 
-// dist/404.html: Cloudflare Pages serves a top-level 404.html with status 404
-// for any path that matches no file or Function. There is deliberately no
-// SPA fallback in _redirects, so unknown URLs get a real 404 instead of the
-// homepage shell at 200 (a "soft 404" that search engines index as junk
-// duplicates). The page is still the app shell, so the SPA boots and the
-// router's catch-all route shows the not-found UI. Built from the unstamped
-// template, so it carries no canonical link or JSON-LD to inherit.
+// Pages serves 404.html with status 404 for unknown paths. It's the app shell,
+// so the router still renders the not-found page.
 {
   const route = '/404';
   const title = escapeHtml(`Page Not Found · ${SITE_NAME}`);
