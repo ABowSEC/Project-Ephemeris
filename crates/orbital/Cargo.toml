@@ -19,3 +19,8 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 panic = "abort"
+
+# Recent Rust emits WebAssembly features (reference types, bulk memory, ...)
+# that wasm-pack's bundled wasm-opt rejects unless they're enabled.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--all-features"]
