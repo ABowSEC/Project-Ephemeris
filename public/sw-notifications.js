@@ -1,13 +1,8 @@
-// Imported into the generated service worker (see workbox.importScripts in
-// vite.config.js). Kept as a separate file because vite-plugin-pwa's generateSW
-// strategy builds sw.js from a template — there is nowhere to put custom code
-// in it, and switching to injectManifest to gain that would mean owning the
-// whole precache setup by hand.
+// Loaded into the generated service worker via workbox.importScripts
+// (vite.config.ts), since generateSW has no place for custom code.
 //
-// Its one job: make a launch alert clickable. Notifications are posted through
-// registration.showNotification (required on Android Chrome), so the click
-// lands here, in the worker, not on the page that created them — the page may
-// well be closed by then.
+// Handles clicks on launch alerts. Those are shown via the service worker
+// (required on Android), so clicks land here, not on the page.
 
 self.addEventListener('notificationclick', (event) => {
   const url = event.notification?.data?.url;

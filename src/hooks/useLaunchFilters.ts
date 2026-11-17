@@ -22,14 +22,8 @@ export interface LaunchFilterState {
 }
 
 /**
- * Filter state for the launch list, stored in the URL query string.
- *
- * Query params rather than component state so a filtered view is itself a
- * link — "every Rocket Lab launch in the next 30 days" can be sent to someone
- * — and so the back button steps through filter changes the way people expect.
- *
- * All filtering runs client-side over the 50-launch feed already in memory, so
- * none of this costs a request against the 15/hour upstream budget.
+ * Launch list filters, stored in the URL so filtered views are shareable and
+ * the back button works. Filtering is client-side, so no extra requests.
  */
 export function useLaunchFilters(launches: LaunchListItem[]): LaunchFilterState {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -92,7 +86,7 @@ export function useLaunchFilters(launches: LaunchListItem[]): LaunchFilterState 
 
       if (cutoff !== null) {
         const date = launchDate(launch);
-        // A launch with no usable date can't be excluded by a date filter —
+        // A launch with no usable date can't be excluded by a date filter;
         // dropping it would silently hide missions that are merely unscheduled.
         if (date && date.getTime() > cutoff) return false;
       }

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Box } from '@chakra-ui/react';
 
-// Three depth layers — gives a subtle parallax sense of depth
+// Three depth layers: gives a subtle parallax sense of depth
 const LAYERS = [
   { count: 120, rMin: 0.2, rMax: 0.6,  speedMin: 0.015, speedMax: 0.04,  opacityMin: 0.15, opacityMax: 0.45 }, // distant
   { count: 60,  rMin: 0.6, rMax: 1.1,  speedMin: 0.04,  speedMax: 0.08,  opacityMin: 0.35, opacityMax: 0.65 }, // mid

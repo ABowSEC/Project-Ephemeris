@@ -1,13 +1,6 @@
-// Loader for the Rust/WebAssembly orbital module (crates/orbital).
-//
-// The module is an optional asset: scripts/build-wasm.mjs skips it when the
-// Rust toolchain is absent, so a dev build may not have it at all. Everything
-// here therefore treats "not available" as an ordinary outcome rather than an
-// error — callers get null and render nothing, which is the correct behavior
-// for a supplementary detail like launch lighting.
-//
-// Loaded by URL rather than imported, so the bundle does not need the files to
-// exist at build time.
+// Loads the optional Rust/WebAssembly orbital module (crates/orbital) by URL.
+// It may not exist in dev builds without Rust, so "unavailable" just returns
+// null and the UI shows nothing.
 
 const MODULE_URL = '/wasm/orbital/orbital.js';
 
@@ -47,10 +40,7 @@ export function loadOrbital(): Promise<OrbitalModule | null> {
   return modulePromise;
 }
 
-/**
- * Lighting conditions at a pad for a launch time, or null when the module is
- * unavailable.
- */
+/** Lighting at the pad for a launch time, or null if the module isn't available. */
 export async function getLighting(
   latitude: number,
   longitude: number,

@@ -8,16 +8,10 @@ import Card from '../Card';
 import type { AnyLaunch } from '../../types/launchLibrary';
 
 /**
- * Whether the launch happens in darkness, daylight, or the twilight window
- * where the exhaust plume lights up.
- *
- * Dawn and dusk launches are the ones worth driving out for — the "jellyfish"
- * plume is visible for hundreds of miles — and nothing in the Launch Library
- * payload says so. It falls out of the pad's coordinates and the T-0, which is
- * what the Rust module computes.
- *
- * Renders nothing at all when the module is unavailable (it is an optional
- * build artifact) or the pad has no coordinates.
+ * Whether the launch is in darkness, daylight, or twilight, when the plume
+ * lights up and is visible for hundreds of miles. Computed by the Rust module
+ * from pad coordinates and T-0. Renders nothing if the module or coordinates
+ * are missing.
  */
 export default function LaunchLighting({ launch }: { launch: AnyLaunch }) {
   const [lighting, setLighting] = useState<Lighting | null>(null);

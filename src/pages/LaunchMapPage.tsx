@@ -81,7 +81,7 @@ function groupBySite(launches: LaunchListItem[]): LaunchSite[] {
 }
 
 // The site name itself is rendered by LaunchGlobe's panel header, which
-// hosts this component — just the count + list here.
+// hosts this component. This only shows the count + list here.
 function SitePopup({ site }: { site: LaunchSite }) {
   const shown = site.launches.slice(0, 5);
   const extra = site.launches.length - shown.length;

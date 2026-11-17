@@ -104,10 +104,8 @@ function cleanCopyright(raw: string | undefined): string {
   return raw.split(/\s*Text:/)[0].replace(/\s+/g, " ").trim();
 }
 
-// media_type "video" covers two different things: a player embed (YouTube,
-// Vimeo) and a bare video file hosted on apod.nasa.gov. The second kind must
-// go in a <video> tag, not an iframe - our CSP frame-src only allows the
-// embed hosts, so framing an .mp4 gets blocked outright.
+// "video" can be an embed (YouTube/Vimeo) or a bare file on apod.nasa.gov.
+// Files need <video>, since the CSP blocks framing them.
 function isVideoFile(url: string | undefined): boolean {
   return /\.(mp4|webm|ogv|mov|m4v)(\?|#|$)/i.test(url || "");
 }
@@ -129,11 +127,8 @@ export default function ApodFeature() {
   // so the modal must not treat it as an image source or download target.
   const isVideoApod = apod?.media_type === "video";
 
-  // Track image readiness with a detached probe (Chakra's useImage) instead
-  // of onLoad on the rendered img: the load event on a display:none element
-  // proved unreliable on the first data commit, leaving the skeleton stuck.
-  // The section sits below the launch content on Home, so hold the media
-  // (image, autoplaying video, or embed) until it's about to scroll in
+  // Track image loading with useImage instead of onLoad, which was unreliable
+  // on a hidden img. Media loads only when the section is about to scroll in.
   const sectionRef = useRef<HTMLDivElement>(null);
   const nearView = useInView(sectionRef, { once: true, margin: "400px 0px" });
   const imgStatus = useImage({ src: nearView && !isVideoApod ? apod?.url : undefined });

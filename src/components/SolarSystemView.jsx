@@ -258,7 +258,7 @@ export default function SolarSystemView() {
       return { group, mesh };
     };
 
-    // Create asteroid belt using InstancedMesh — one draw call for all asteroids
+    // Create asteroid belt using InstancedMesh: one draw call for all asteroids
     const createAsteroidBelt = () => {
       const COUNT    = 200;
       const geometry = new THREE.SphereGeometry(1, 5, 5);
@@ -299,7 +299,7 @@ export default function SolarSystemView() {
     const cleanupResize = setupResizeHandler(camera, renderer, mountNode);
 
     // Planet map textures are cached/shared across mounts (see Planet.jsx),
-    // so they must survive this component's teardown — preserve them.
+    // so they must survive this component's teardown; preserve them.
     const preservedTextures = new Set();
     Object.values(planetObjects).forEach(({ mesh }) => {
       if (mesh.material?.map) preservedTextures.add(mesh.material.map);

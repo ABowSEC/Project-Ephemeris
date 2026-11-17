@@ -19,21 +19,14 @@ import ComingUpStrip from "../components/home/ComingUpStrip";
 import ApodFeature from "../components/home/ApodFeature";
 import DiscoverLinks from "../components/home/DiscoverLinks";
 
-// Slow opacity breathe for the hero watermark; deliberately its own
-// keyframes rather than reusing `pulse` (that one swings 1 <-> 0.4, tuned
-// for a small fully-opaque status dot, not a large low-opacity watermark -
-// animating opacity overrides a static opacity prop on the same element
-// rather than multiplying with it, so the intended low-opacity range has to
-// be baked into the keyframes directly).
+// Slow fade for the hero watermark. Separate from `pulse` because animated
+// opacity replaces the element's own, so the low range is set here.
 const breathe = keyframes`
   0%, 100% { opacity: 0.14; }
   50%       { opacity: 0.30; }
 `;
 
-/**
- * Home, ordered by what a visitor came for: the next launch (hero), what's
- * lined up after it, then today's APOD, then the rest of the site.
- */
+/** Home: next launch, what's after it, today's APOD, then the rest. */
 export default function Home() {
   usePageMeta("/");
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -66,9 +59,7 @@ export default function Home() {
               draggable={false}
               sx={{
                 animation: prefersReducedMotion ? undefined : `${breathe} 6s ease-in-out infinite`,
-                // With the hero transparent, screen blending no longer hides
-                // the icon's dark square tile against the starfield; a radial
-                // mask feathers it away and leaves only the emblem
+                // Fades out the icon's dark square edges
                 maskImage: "radial-gradient(closest-side, #000 82%, transparent 100%)",
               }}
             />

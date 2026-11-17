@@ -10,17 +10,8 @@ import {
 } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 
-// A single-select dropdown that looks like the rest of the UI.
-//
-// This exists because a native <select> can't be made to. Its list is drawn by
-// the operating system, outside the page's DOM, and browsers apply CSS to it
-// inconsistently — `color` usually lands, `background` usually doesn't, so
-// styling it produces washed-out text on a system-white popup rather than a
-// dark list. A Menu renders ordinary elements, which style like anything else.
-//
-// The trade: on phones a native select opens the OS picker, with its big touch
-// targets. This is an in-page popup instead — still touch-friendly, but not
-// the platform control.
+// Dropdown built on Menu, since a native <select>'s popup can't be styled
+// dark reliably. Trade-off: phones get an in-page list, not the OS picker.
 
 export interface FilterOption {
   value: string;
@@ -52,9 +43,7 @@ export default function FilterSelect({
       <MenuButton
         type="button"
         aria-label={`Filter by ${label}`}
-        // Styled to impersonate the search Input beside it rather than to look
-        // like a menu trigger, so the filter row reads as one set of controls.
-        // Matches Chakra's size="sm" field metrics.
+        // Styled like the search input next to it (Chakra size="sm").
         h="32px"
         minW="140px"
         maxW={maxW}

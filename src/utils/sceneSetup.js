@@ -1,12 +1,6 @@
 import * as THREE from 'three';
 
-/**
- * Creates a basic Three.js scene with camera and renderer.
- * @param {number} width - Scene width
- * @param {number} height - Scene height
- * @param {Object} options - Configuration options
- * @returns {Object} Scene, camera, and renderer objects
- */
+/** Basic Three.js scene, camera, and renderer. */
 export function createBasicScene(width, height, options = {}) {
   const {
     fov = 75,
@@ -39,12 +33,7 @@ export function createBasicScene(width, height, options = {}) {
   return { scene, camera, renderer };
 }
 
-/**
- * Creates a starfield background for space scenes with color and size variation.
- * @param {number} starCount - Number of stars to generate
- * @param {number} spread - How far stars spread from center
- * @returns {THREE.Group} Starfield group with multiple point layers
- */
+/** Starfield background with varied star colors and sizes. */
 export function createStarfield(starCount = 8000, spread = 2000) {
   const group = new THREE.Group();
 
@@ -106,11 +95,7 @@ export function createStarfield(starCount = 8000, spread = 2000) {
   return group;
 }
 
-/**
- * Creates basic lighting setup for a scene.
- * @param {Object} options - Lighting configuration
- * @returns {Object} Light objects
- */
+/** Ambient, point (at the origin, for the sun), and directional lights. */
 export function createBasicLighting(options = {}) {
   const {
     ambientIntensity = 1.2,
@@ -143,13 +128,7 @@ export function createBasicLighting(options = {}) {
   return lights;
 }
 
-/**
- * Creates a sun mesh with emissive material.
- * @param {number} radius - Sun radius
- * @param {string} texturePath - Path to sun texture
- * @param {Object} options - Material options
- * @returns {THREE.Mesh} Sun mesh
- */
+/** Emissive sun mesh with a glow sprite. */
 export function createSun(radius = 4, texturePath = "/textures/sun.jpg", options = {}) {
   const {
     emissiveColor = 0xffaa00,
@@ -174,9 +153,7 @@ export function createSun(radius = 4, texturePath = "/textures/sun.jpg", options
   const group = new THREE.Group();
   group.add(sunMesh);
 
-  // Corona as a camera-facing additive sprite with a soft radial falloff.
-  // A billboard glow avoids the hard-edged banding of stacked solid shells
-  // and stays bright at the core, fading smoothly to transparent.
+  // Corona as an additive billboard sprite: smooth falloff, no banding.
   const glowTexture = createSunGlowTexture();
   const addGlowSprite = (scale, color, opacity, renderOrder) => {
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -198,11 +175,7 @@ export function createSun(radius = 4, texturePath = "/textures/sun.jpg", options
   return group;
 }
 
-/**
- * Builds a radial-gradient texture (bright centre → transparent edge) used
- * for additive sprite glows like the sun's corona.
- * @returns {THREE.CanvasTexture}
- */
+/** Radial gradient (bright center to transparent) for glow sprites. */
 function createSunGlowTexture() {
   const size = 256;
   const canvas = document.createElement('canvas');
@@ -220,13 +193,7 @@ function createSunGlowTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-/**
- * Sets up a complete solar system scene with basic elements.
- * @param {number} width - Scene width
- * @param {number} height - Scene height
- * @param {Object} options - Scene configuration
- * @returns {Object} Complete scene setup
- */
+/** Full solar system scene: renderer, camera, stars, lights, and sun. */
 export function createSolarSystemScene(width, height, options = {}) {
   const {
     starCount = 8000,
@@ -261,13 +228,7 @@ export function createSolarSystemScene(width, height, options = {}) {
   };
 }
 
-/**
- * Handles window resize for a Three.js scene.
- * @param {THREE.Camera} camera - Camera to update
- * @param {THREE.WebGLRenderer} renderer - Renderer to resize
- * @param {HTMLElement} container - Container element
- * @returns {Function} Cleanup function
- */
+/** Keeps camera and renderer sized to the container. Returns a cleanup function. */
 export function setupResizeHandler(camera, renderer, container) {
   const handleResize = () => {
     if (!container) return;

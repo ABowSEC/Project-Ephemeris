@@ -22,19 +22,12 @@ function setContent(selector: string, content: string) {
 }
 
 /**
- * Sets the document title, meta description, og tags, and canonical link for
- * a route, looked up from routeMeta. Call once per page component with the
- * route path: usePageMeta('/launches').
+ * Sets title, description, og tags, and canonical for a route from routeMeta,
+ * e.g. usePageMeta('/launches'). Keeps metadata right during in-app
+ * navigation; direct visits already get it from the prerendered HTML.
  *
- * The prerendered HTML (scripts/prerender.mjs) already carries these values
- * for direct visits; this hook keeps them correct across SPA navigations.
- *
- * Parameterized routes (/launches/:slug) have no fixed entry in routeMeta, so
- * they pass an `override` built from the loaded data instead. Their direct-visit
- * and crawler metadata comes from the edge — functions/launches/[slug].ts —
- * and this keeps client-side navigation consistent with it. Pass null while
- * the data is still loading; the previous page's tags stay until it arrives,
- * which is better than blanking them.
+ * /launches/:slug passes an `override` instead. Pass null while loading to
+ * keep the previous tags until data arrives.
  */
 export function usePageMeta(path: string, override: PageMetaOverride | null = null) {
   // Depending on the object identity would re-run this on every render, since

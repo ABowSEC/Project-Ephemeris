@@ -1,15 +1,7 @@
-// Compiles crates/orbital to WebAssembly, if the toolchain is present.
-//
-// Deliberately non-fatal when Rust or wasm-pack is missing: contributors who
-// only touch the React side should not need a Rust install to run the app, and
-// everything the module powers degrades to simply not being shown. CI installs
-// the toolchain (see .github/workflows/ci.yml), so the release build always
-// includes it and a genuinely broken crate still fails the build there.
-//
-// Output goes to public/wasm/orbital rather than into src/, so it is a plain
-// static asset that Vite copies through. That is what keeps the bundle
-// resolvable when the directory does not exist: nothing imports it at build
-// time, and src/utils/orbital.ts loads it by URL at runtime.
+// Builds crates/orbital to WebAssembly if Rust and wasm-pack are installed.
+// Skips quietly otherwise so frontend-only work doesn't need Rust; CI always
+// builds it. Output goes to public/wasm/orbital and is loaded by URL at
+// runtime, so the bundle builds fine without it.
 
 import { spawnSync } from 'node:child_process';
 import { rmSync } from 'node:fs';

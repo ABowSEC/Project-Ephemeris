@@ -15,16 +15,9 @@ export interface ApiResult<T> {
 }
 
 /**
- * Data-fetching hook: runs `fetcher` on mount and whenever `deps` change,
- * aborting any in-flight request first so a stale response can never
- * overwrite a newer one.
- *
- * refetch({ background: true }) re-fetches without flipping `loading`,
- * for silent polling that shouldn't replace content with a spinner.
- * Any other keys in the options object passed to refetch (e.g. `force`)
- * are forwarded to `fetcher` as its second argument, so a caller can ask
- * for a real re-fetch rather than whatever cache the fetcher would
- * otherwise consult.
+ * Runs `fetcher` on mount and when `deps` change, aborting any older request.
+ * refetch({ background: true }) skips the loading state; other options (like
+ * `force`) are passed through to the fetcher.
  *
  * @example
  * const { data, loading, error, refetch } = useApi(
@@ -68,10 +61,8 @@ export function useApi<T>(
 
   useEffect(() => {
     refetch();
-    // refetch assigns its controller synchronously before awaiting, so this
-    // captures the controller belonging to THIS effect run. Aborting the
-    // shared ref instead would cancel a newer request under StrictMode's
-    // mount-unmount-mount cycle.
+    // Capture this run's controller. Aborting the shared ref could cancel a
+    // newer request under StrictMode's double mount.
     const controller = controllerRef.current;
     return () => controller?.abort();
   }, [refetch]);

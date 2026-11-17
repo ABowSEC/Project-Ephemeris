@@ -20,9 +20,7 @@ function pollIntervalFor(launch: LaunchDetailed | null): number | null {
   if (!date) return IDLE_POLL_MS;
 
   const untilLaunch = date.getTime() - Date.now();
-  // Also poll fast just *after* T-0: that is when the status flips to In
-  // Flight and then to Success or Failure, which is exactly when someone
-  // watching the page cares most.
+  // Also poll fast just after T-0, when the status changes.
   return untilLaunch < IMMINENT_WINDOW_MS && untilLaunch > -IMMINENT_WINDOW_MS
     ? IMMINENT_POLL_MS
     : IDLE_POLL_MS;
@@ -40,13 +38,8 @@ export interface LaunchDetailResult {
 }
 
 /**
- * One launch, by slug.
- *
- * Deliberately not built on useApi: this hook seeds its state synchronously
- * from whatever the store already has, so clicking a launch in the feed paints
- * the detail page immediately rather than flashing a spinner for data that is
- * sitting in localStorage. useApi always starts at `loading: true`, which is
- * right for a cold fetch and wrong here.
+ * One launch, by slug. Not built on useApi because it starts from cached data
+ * so the page renders instantly, where useApi always starts out loading.
  */
 export function useLaunchDetail(slug: string | undefined): LaunchDetailResult {
   const seed = useMemo(
@@ -60,9 +53,7 @@ export function useLaunchDetail(slug: string | undefined): LaunchDetailResult {
   const [loading, setLoading] = useState(!seed);
   const [reloadToken, setReloadToken] = useState(0);
 
-  // A feed entry has no `updates` array; a detailed payload always does, even
-  // if empty. That is the cheapest reliable signal that we are showing the
-  // shallow copy and should keep the detailed fetch going.
+  // Feed entries have no `updates` array, so this is the partial copy
   const isPartial = Boolean(launch) && !Array.isArray(launch?.updates);
 
   const pollRef = useRef<number | null>(null);
@@ -87,7 +78,7 @@ export function useLaunchDetail(slug: string | undefined): LaunchDetailResult {
         if (cancelled) return;
         const status = (err as { status?: number }).status;
         if (status === 404) setNotFound(true);
-        // Keep showing the seeded copy on a transient failure — an error page
+        // Keep showing the seeded copy on a transient failure; an error page
         // in place of data we already have would be a downgrade.
         else if (!seed) setError((err as Error).message ?? 'Could not load this launch.');
       } finally {
@@ -102,9 +93,7 @@ export function useLaunchDetail(slug: string | undefined): LaunchDetailResult {
     };
   }, [slug, seed, reloadToken]);
 
-  // Poll on a cadence that tightens as T-0 approaches, and stops once the
-  // launch has flown. Re-evaluated whenever the launch object changes, so the
-  // interval tightens on its own as the window closes.
+  // Poll faster as T-0 approaches; stop once it's flown.
   useEffect(() => {
     const interval = pollIntervalFor(launch);
     if (!slug || interval == null) return;
@@ -122,10 +111,8 @@ export function useLaunchDetail(slug: string | undefined): LaunchDetailResult {
     };
   }, [slug, launch]);
 
-  // The poll above is throttled or frozen while the tab is hidden, so re-check
-  // as soon as the visitor comes back rather than whenever the next tick fires.
-  // The store returns its cached copy if it checked within the freshness
-  // window, so the extra events cost nothing on a quick tab switch.
+  // Recheck when the tab becomes visible. Cheap: the store returns its cached
+  // copy if it's still fresh.
   useEffect(() => {
     if (!slug) return;
     let cancelled = false;

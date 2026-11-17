@@ -1,22 +1,11 @@
-// Types for the Launch Library 2 (thespacedevs.com) v2.3.0 API.
+// Types for the Launch Library 2 v2.3.0 API, hand-written to match what it
+// actually returns:
+//   - v2.2.0 payloads still linger in caches, so both shapes are modeled where
+//     they differ. Read them through utils/launchFields. Drop the v2.2.0 parts
+//     once those caches age out.
+//   - Almost everything is nullable, on purpose.
 //
-// Hand-written rather than generated, because the point is to model what the
-// API *actually* returns, not the happy path:
-//
-//   - v2.2.0 payloads are still in circulation: the edge keeps stale copies for
-//     up to a month and browsers keep their own, and those were cached before
-//     the v2.3.0 switch. Where the two versions disagree (images became
-//     objects, coordinates became numbers, `vidURLs` became `vid_urls`, ...)
-//     both shapes are modelled here and normalized once, in utils/launchFields.
-//     Drop the v2.2.0 halves once those caches have aged out.
-//   - Almost everything is nullable. A launch with no confirmed orbit, no
-//     mission description, no weather probability, or no pad coordinates is
-//     routine, not an error. Optional/`| null` throughout is deliberate.
-//   - v2.2.0 sent `pad.latitude`/`pad.longitude` as strings ("28.56194122");
-//     v2.3.0 sends numbers. Go through launchFields.padCoordinates.
-//
-// Only the fields the app reads are declared. Adding one means checking a live
-// response first — see the "Verified API facts" notes in the plan.
+// Only fields the app uses are declared. Check a live response before adding one.
 
 /** Latitude/longitude: strings in v2.2.0, numbers in v2.3.0. */
 export type Coordinate = string | number;
@@ -39,17 +28,13 @@ export interface Country {
 
 export interface LaunchStatus {
   id: number;
-  /** 'Go' | 'TBC' | 'TBD' | 'Success' | 'Failure' | 'Hold' | ... — see data/launchStatus */
+  /** 'Go' | 'TBC' | 'TBD' | 'Success' | 'Failure' | 'Hold' | ... (see data/launchStatus) */
   abbrev: string;
   name: string;
   description?: string;
 }
 
-/**
- * How precise the T-0 actually is. Displaying a to-the-second countdown for a
- * launch only known to the month is the kind of false confidence this field
- * exists to prevent.
- */
+/** How precise the T-0 is (to the second, minute, month, ...). */
 export interface NetPrecision {
   id: number;
   /** 'SEC' | 'MIN' | 'HOUR' | 'DAY' | 'MONTH' | 'QUARTER' | 'YEAR' | ... */
@@ -128,11 +113,7 @@ export interface VideoUrlType {
   name: string;
 }
 
-/**
- * A webcast link. Note that `url` is frequently NOT YouTube — x.com broadcasts
- * are common — so callers must check embeddability rather than assume, since
- * the CSP only permits YouTube and Vimeo frames.
- */
+/** A webcast link. Often not YouTube, so check embeddableVideo() before framing it. */
 export interface VideoUrl {
   /** Lower numbers rank higher; sort ascending to find the primary feed. */
   priority: number;
@@ -155,7 +136,7 @@ export interface InfoUrl {
   description?: string | null;
 }
 
-/** A curator-written note on the mission — the real "status changes" feed. */
+/** A curator-written note on the mission: the real "status changes" feed. */
 export interface LaunchUpdate {
   id: number;
   comment: string;
@@ -183,7 +164,7 @@ export interface Program {
 /** Fields present in every response mode. */
 export interface LaunchBase {
   id: string;
-  /** Stable, upstream-maintained, and unique — the basis for our permalinks. */
+  /** Stable, upstream-maintained, and unique: the basis for our permalinks. */
   slug: string;
   name: string;
   status: LaunchStatus;
@@ -198,10 +179,7 @@ export interface LaunchBase {
   url?: string;
 }
 
-/**
- * A launch from `mode=detailed` (the single-launch endpoint).
- * Everything the detail page needs lives here and nowhere else.
- */
+/** A launch from `mode=detailed` (the single-launch endpoint). */
 export interface LaunchDetailed extends LaunchBase {
   launch_service_provider?: Agency | null;
   rocket?: Rocket | null;
@@ -242,11 +220,7 @@ export interface LaunchListItem extends LaunchBase {
   vid_urls?: VideoUrl[] | null;
 }
 
-/**
- * Either shape. Components that render both feed entries and detailed payloads
- * should accept this and go through utils/launchFields for anything the two
- * modes disagree about.
- */
+/** Either shape. Use utils/launchFields for fields where they differ. */
 export type AnyLaunch = LaunchDetailed | LaunchListItem;
 
 /** LL2 paginates everything, including single-result slug lookups. */

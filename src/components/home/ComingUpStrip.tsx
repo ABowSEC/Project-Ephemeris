@@ -28,11 +28,7 @@ function ShortCountdown({ launch }: { launch: LaunchListItem }) {
   );
 }
 
-/**
- * The launches lined up after the next one, as a compact list. Gives Home
- * something to scan beyond a single countdown, and a direct path into the
- * detail pages. Reads the shared launch cache, so it adds no requests.
- */
+/** Compact list of the launches after the next one. Uses the cached feed. */
 export default function ComingUpStrip() {
   const { launches, nextLaunch, loading } = useUpcomingLaunches();
 

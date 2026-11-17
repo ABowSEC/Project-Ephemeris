@@ -1,8 +1,5 @@
-// Pages Function: health of the scheduled launch-data refresh.
-//
-// `curl https://ephemeris-online.com/api/status` answers "is the schedule
-// updating?" in one request: when the cron last tried, when it last succeeded,
-// what failed it, and how old the copy visitors are being served is.
+// GET /api/status: is the scheduled refresh working? Shows the last attempt,
+// last success, the failure reason, and how old the served data is.
 
 import { readCooldown, readRefreshStatus, type Ll2Context } from '../_shared/ll2Cache';
 import { upcomingFeedOptions } from '../_shared/launchLookup';

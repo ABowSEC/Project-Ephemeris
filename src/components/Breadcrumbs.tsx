@@ -4,15 +4,11 @@ import { Link as RouterLink } from 'react-router-dom';
 
 export interface Crumb {
   label: string;
-  /** Omit on the final/current crumb — it renders as plain text, not a link. */
+  /** Omit on the final/current crumb: it renders as plain text, not a link. */
   to?: string;
 }
 
-/**
- * Home > Section > Page trail. The visible counterpart to the BreadcrumbList
- * JSON-LD that functions/launches/[slug].ts stamps into the edge-rendered
- * shell — that script covers crawlers, this covers everyone else.
- */
+/** Home > Section > Page trail. Matches the BreadcrumbList JSON-LD from the edge. */
 export default function Breadcrumbs({ items }: { items: Crumb[] }) {
   return (
     <Breadcrumb

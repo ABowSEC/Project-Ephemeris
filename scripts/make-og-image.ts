@@ -1,9 +1,6 @@
-// Generates public/og-image.png: the 1200×630 card shown when a link to the
-// site is shared (Discord, X, iMessage, Slack...). Launch pages override it
-// at the edge with the mission's own image; every other page uses this.
-//
-// Run with `npm run og-image` after changing the brand art or the tagline.
-// Node runs this .ts file directly (built-in type stripping, Node 22.18+).
+// Generates public/og-image.png, the 1200x630 link-preview card. Launch pages
+// use their mission image instead.
+// Run `npm run og-image` after changing the brand art or tagline.
 import sharp from 'sharp';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';

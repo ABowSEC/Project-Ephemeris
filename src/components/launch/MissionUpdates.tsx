@@ -4,13 +4,8 @@ import Card from '../Card';
 import type { LaunchUpdate } from '../../types/launchLibrary';
 
 /**
- * The mission's change history, newest first.
- *
- * This is where "accurate status changes" actually comes from. Space Devs
- * curators annotate every slip, scrub, hold and target change by hand
- * ("Tweaked T-0.", "Scrubbed due to upper level winds."), which is far better
- * than anything we could infer by diffing the payload ourselves — and it
- * explains *why* a date moved, which a diff never could.
+ * The mission's update history, newest first. Space Devs curators write these
+ * by hand, so they explain why a date moved ("Scrubbed due to winds.").
  */
 export default function MissionUpdates({ updates }: { updates: LaunchUpdate[] }) {
   if (!updates.length) return null;

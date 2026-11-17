@@ -1,11 +1,5 @@
-// Pages Function: one launch by its Launch Library slug.
-//
-// GET /api/launch/falcon-9-block-5-starlink-group-17-53
-//
-// Returns the launch object itself (not the paginated envelope upstream sends)
-// from mode=detailed, which is the only mode carrying the updates timeline,
-// webcast list, hold/fail reasons, and launch-attempt statistics the detail
-// page renders.
+// GET /api/launch/<slug>: one launch from mode=detailed (the only mode with
+// updates, webcasts, and launch stats). Returns the bare launch object.
 
 import { serveCached, type Ll2Context } from '../../_shared/ll2Cache';
 import { isValidSlug, launchBySlugOptions } from '../../_shared/launchLookup';

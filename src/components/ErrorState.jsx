@@ -2,13 +2,12 @@ import { Alert, AlertIcon, AlertTitle, AlertDescription, Box, Button } from '@ch
 import { RepeatIcon } from '@chakra-ui/icons';
 
 /**
- * Shared error display with an optional in-place retry, so failures look
- * the same everywhere and never resort to a full page reload.
+ * Shared error message with an optional retry button (omit onRetry to hide it).
  *
  * @param {Object}    props
  * @param {string}    [props.title]
  * @param {string}    [props.message]
- * @param {() => void} [props.onRetry]  Omit to render without a retry button
+ * @param {() => void} [props.onRetry]
  * @param {string}    [props.retryLabel]
  * @param {'error' | 'warning' | 'info' | 'success'} [props.status]
  * @param {boolean}   [props.isRetrying]

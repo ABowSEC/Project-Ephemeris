@@ -8,8 +8,8 @@ export class OrbitControls {
     this.enableDamping = true;
     this.enablePan     = false;
     this.dampingFactor = 0.05;
-    // Unset (0/Infinity) by default so existing unclamped callers — the solar
-    // sim zooms freely between planets — see no behavior change.
+    // Unset (0/Infinity) by default so existing unclamped callers (the solar
+    // sim zooms freely between planets) see no behavior change.
     this.minDistance = options.minDistance ?? 0;
     this.maxDistance = options.maxDistance ?? Infinity;
 

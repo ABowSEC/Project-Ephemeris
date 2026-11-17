@@ -7,13 +7,8 @@ import Card from '../Card';
 import type { AnyLaunch, LaunchDetailed, VideoUrl } from '../../types/launchLibrary';
 
 /**
- * The official webcast, embedded where the CSP allows it.
- *
- * public/_headers permits frames only from YouTube and Vimeo. Webcasts are
- * frequently hosted elsewhere — SpaceX has largely moved to x.com broadcasts —
- * and an iframe pointing at one of those is silently blank in production while
- * working fine in dev. So embeddability is checked, never assumed, and
- * anything else becomes a labelled outbound link.
+ * The official webcast. Embedded only for YouTube/Vimeo, which the CSP allows;
+ * anything else (often x.com for SpaceX) becomes a link.
  */
 export default function WebcastPanel({ launch }: { launch: AnyLaunch }) {
   const primary = officialWebcast(launch);

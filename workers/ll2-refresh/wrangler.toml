@@ -1,14 +1,11 @@
 # Scheduled refresh of the upcoming-launches feed (see index.ts).
 #
-# Deploy from this directory:   npx wrangler deploy
-# Test locally:                 npx wrangler dev --test-scheduled
-#                               curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
+# Deploy:  npx wrangler deploy
+# Test:    npx wrangler dev --test-scheduled
+#          curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
 #
-# The KV id must be the SAME namespace bound as LAUNCHES_CACHE in the Pages
-# project (Workers & Pages → ephemeris-project → Settings → Bindings). A
-# different namespace would refresh a copy nobody reads.
-#
-# Optional: `npx wrangler secret put LL2_TOKEN` if a Space Devs key is added.
+# The KV id must match the LAUNCHES_CACHE binding on the Pages project.
+# Optional: `npx wrangler secret put LL2_TOKEN` for a paid Space Devs key.
 
 name = "ephemeris-ll2-refresh"
 main = "index.ts"
