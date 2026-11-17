@@ -4,7 +4,8 @@
 // description, og tags, and canonical URL baked in. Cloudflare Pages serves
 // a static file when one matches the path, so crawlers and link-preview bots
 // get route-specific metadata without executing JS; the SPA hydrates on top
-// as usual. Also emits dist/sitemap.xml for the non-hidden routes.
+// as usual. Also emits dist/404.html (served with status 404 for unknown
+// paths) and dist/sitemap.xml for the non-hidden routes.
 //
 // This is metadata prerendering only: the page body is still rendered
 // client-side. Full HTML prerendering would need the APIs' live data and is
@@ -112,6 +113,50 @@ for (const [route, meta] of Object.entries(routeMeta)) {
   count += 1;
 }
 
+// dist/404.html: Cloudflare Pages serves a top-level 404.html with status 404
+// for any path that matches no file or Function. There is deliberately no
+// SPA fallback in _redirects, so unknown URLs get a real 404 instead of the
+// homepage shell at 200 (a "soft 404" that search engines index as junk
+// duplicates). The page is still the app shell, so the SPA boots and the
+// router's catch-all route shows the not-found UI. Built from the unstamped
+// template, so it carries no canonical link or JSON-LD to inherit.
+{
+  const route = '/404';
+  const title = escapeHtml(`Page Not Found · ${SITE_NAME}`);
+  const description = escapeHtml('This page does not exist.');
+  let html = template;
+  html = replaceTag(html, /<title>[\s\S]*?<\/title>/, `<title>${title}</title>`, '<title>', route);
+  html = replaceTag(
+    html,
+    /<meta\s+name="description"[\s\S]*?\/>/,
+    `<meta name="description" content="${description}" />`,
+    'meta description',
+    route
+  );
+  html = replaceTag(
+    html,
+    /<meta\s+property="og:title"[\s\S]*?\/>/,
+    `<meta property="og:title" content="${title}" />`,
+    'og:title',
+    route
+  );
+  html = replaceTag(
+    html,
+    /<meta\s+name="twitter:title"[\s\S]*?\/>/,
+    `<meta name="twitter:title" content="${title}" />`,
+    'twitter:title',
+    route
+  );
+  html = replaceTag(
+    html,
+    /<\/head>/,
+    `<meta name="robots" content="noindex" />\n  </head>`,
+    '</head>',
+    route
+  );
+  writeFileSync(join(dist, '404.html'), html);
+}
+
 const today = new Date().toISOString().slice(0, 10);
 const sitemapEntries = Object.entries(routeMeta)
   .filter(([route, meta]) => !meta.hidden && !isParameterized(route))
@@ -126,4 +171,4 @@ writeFileSync(
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapEntries}\n</urlset>\n`
 );
 
-console.log(`prerender: stamped ${count} routes, wrote sitemap.xml`);
+console.log(`prerender: stamped ${count} routes, wrote 404.html and sitemap.xml`);

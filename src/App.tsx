@@ -26,7 +26,7 @@ import {
   DrawerBody,
 } from '@chakra-ui/react';
 import { HamburgerIcon } from '@chakra-ui/icons';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 
 // Route pages are code-split so heavy dependencies (Three.js on /solarsim,
@@ -50,6 +50,7 @@ import Footer from './components/Footer';
 import { useKonamiCode } from './hooks/useKonamiCode';
 import { useLaunchAlerts } from './hooks/useLaunchAlerts';
 import { withAlpha } from './utils/color';
+import { SITE_NAME } from './seo/routeMeta';
 
 // Named alias: ESLint's no-unused-vars can't see `motion` used as <motion.div>
 const MotionDiv = motion.div;
@@ -273,6 +274,24 @@ function KonamiWarp() {
   );
 }
 
+// Direct visits to unknown paths get a real 404 from Cloudflare (dist/404.html,
+// see scripts/prerender.mjs). A status code can't be set on an in-app
+// navigation, so this just keeps the tab title honest there.
+function NotFound() {
+  useEffect(() => {
+    document.title = `Page Not Found · ${SITE_NAME}`;
+  }, []);
+
+  return (
+    <Box textAlign="center" py={20}>
+      <Text fontSize="2xl" mb={4} color="text.primary">Page Not Found</Text>
+      <Link as={RouterLink} to="/" color="brand.primary">
+        Return to Home
+      </Link>
+    </Box>
+  );
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
   return (
@@ -298,17 +317,7 @@ function AnimatedRoutes() {
             <Route path="/mars"      element={<MarsPage />} />
             <Route path="/iss"       element={<ISSLivePage />} />
             <Route path="/solarsim"  element={<SolarSimPage />} />
-            <Route
-              path="*"
-              element={
-                <Box textAlign="center" py={20}>
-                  <Text fontSize="2xl" mb={4} color="text.primary">Page Not Found</Text>
-                  <Link as={RouterLink} to="/" color="brand.primary">
-                    Return to Home
-                  </Link>
-                </Box>
-              }
-            />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
         </ErrorBoundary>
