@@ -4,8 +4,7 @@
 // description, og tags, and canonical URL baked in. Cloudflare Pages serves
 // a static file when one matches the path, so crawlers and link-preview bots
 // get route-specific metadata without executing JS; the SPA hydrates on top
-// as usual. Also emits dist/404.html (served with status 404 for unknown
-// paths) and dist/sitemap.xml for the non-hidden routes.
+// as usual. Also emits dist/404.html and dist/sitemap.xml.
 //
 // This is metadata prerendering only: the page body is still rendered
 // client-side. Full HTML prerendering would need the APIs' live data and is
@@ -107,24 +106,16 @@ for (const [route, meta] of Object.entries(routeMeta)) {
   }
   html = replaceTag(html, /<\/head>/, `${headExtras}\n  </head>`, '</head>', route);
 
-  // dist/launches.html, not dist/launches/index.html: Pages serves a
-  // directory index only at the trailing-slash URL (/launches 308s to
-  // /launches/), which would put a redirect in front of every canonical,
-  // sitemap entry, and router link. A same-named .html file is served at
-  // /launches itself, and /launches/ redirects to it instead.
+  // launches.html, not launches/index.html: Pages serves the latter only at
+  // /launches/, but our canonicals and links use /launches.
   const outFile = route === '/' ? join(dist, 'index.html') : join(dist, `${route.slice(1)}.html`);
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, html);
   count += 1;
 }
 
-// dist/404.html: Cloudflare Pages serves a top-level 404.html with status 404
-// for any path that matches no file or Function. There is deliberately no
-// SPA fallback in _redirects, so unknown URLs get a real 404 instead of the
-// homepage shell at 200 (a "soft 404" that search engines index as junk
-// duplicates). The page is still the app shell, so the SPA boots and the
-// router's catch-all route shows the not-found UI. Built from the unstamped
-// template, so it carries no canonical link or JSON-LD to inherit.
+// Pages serves 404.html with status 404 for unknown paths. It's the app shell,
+// so the router still renders the not-found page.
 {
   const route = '/404';
   const title = escapeHtml(`Page Not Found · ${SITE_NAME}`);

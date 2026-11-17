@@ -274,9 +274,6 @@ function KonamiWarp() {
   );
 }
 
-// Direct visits to unknown paths get a real 404 from Cloudflare (dist/404.html,
-// see scripts/prerender.mjs). A status code can't be set on an in-app
-// navigation, so this just keeps the tab title honest there.
 function NotFound() {
   useEffect(() => {
     document.title = `Page Not Found · ${SITE_NAME}`;
