@@ -1,6 +1,6 @@
 // Post-build SEO stamping. Runs after `vite build` (see the build script in
 // package.json) and, for every route in routeMeta, writes a copy of
-// dist/index.html at dist/<route>/index.html with that route's title,
+// dist/index.html at dist/<route>.html with that route's title,
 // description, og tags, and canonical URL baked in. Cloudflare Pages serves
 // a static file when one matches the path, so crawlers and link-preview bots
 // get route-specific metadata without executing JS; the SPA hydrates on top
@@ -12,7 +12,7 @@
 // not worth the fragility for a site whose content changes hourly.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { SITE_NAME, SITE_URL, routeMeta } from '../src/seo/routeMeta.js';
 
 const dist = resolve(process.cwd(), 'dist');
@@ -107,9 +107,14 @@ for (const [route, meta] of Object.entries(routeMeta)) {
   }
   html = replaceTag(html, /<\/head>/, `${headExtras}\n  </head>`, '</head>', route);
 
-  const outDir = route === '/' ? dist : join(dist, route.slice(1));
-  mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, 'index.html'), html);
+  // dist/launches.html, not dist/launches/index.html: Pages serves a
+  // directory index only at the trailing-slash URL (/launches 308s to
+  // /launches/), which would put a redirect in front of every canonical,
+  // sitemap entry, and router link. A same-named .html file is served at
+  // /launches itself, and /launches/ redirects to it instead.
+  const outFile = route === '/' ? join(dist, 'index.html') : join(dist, `${route.slice(1)}.html`);
+  mkdirSync(dirname(outFile), { recursive: true });
+  writeFileSync(outFile, html);
   count += 1;
 }
 
