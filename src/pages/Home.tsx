@@ -2,56 +2,11 @@ import { Box, Button, Container, Flex, Heading, Stack, Text, VStack } from "@cha
 import { Link as RouterLink } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { usePageMeta } from "../hooks/usePageMeta";
-import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
-import { useImageStatus } from "../hooks/useImageStatus";
-import { launchImageUrl } from "../utils/launchFields";
-import { withAlpha } from "../utils/color";
+import HomeHeroPhoto from "../components/home/HomeHeroPhoto";
 import NextLaunchPanel from "../components/home/NextLaunchPanel";
 import ComingUpStrip from "../components/home/ComingUpStrip";
 import ApodFeature from "../components/home/ApodFeature";
 import DiscoverLinks from "../components/home/DiscoverLinks";
-
-/**
- * Full-bleed photo of the next launch, fading into the starfield at the
- * bottom. With no photo (or one that fails), the starfield is the backdrop.
- */
-function HeroPhoto() {
-  const { nextLaunch } = useUpcomingLaunches();
-  const image = launchImageUrl(nextLaunch);
-  const status = useImageStatus(image);
-  if (!image || status === "failed") return null;
-
-  return (
-    <Box
-      aria-hidden="true"
-      position="absolute"
-      inset={0}
-      bottom={{ base: "auto", lg: 0 }}
-      h={{ base: "380px", lg: "auto" }}
-      opacity={status === "ready" ? 1 : 0}
-      transition="opacity 0.6s"
-      sx={{ maskImage: "linear-gradient(to bottom, #000 60%, transparent 100%)" }}
-    >
-      <Box
-        position="absolute"
-        inset={0}
-        bgImage={`url(${image})`}
-        bgSize="cover"
-        bgPos="center"
-        filter={{ base: "brightness(0.7)", lg: "brightness(0.85)" }}
-      />
-      {/* Scrim behind the text column only (DESIGN.md, Elevation) */}
-      <Box
-        position="absolute"
-        inset={0}
-        bgImage={{
-          base: `linear-gradient(to bottom, ${withAlpha("bg.body", 20)}, ${withAlpha("bg.body", 60)})`,
-          lg: `linear-gradient(to right, ${withAlpha("bg.body", 92)} 0%, ${withAlpha("bg.body", 70)} 35%, transparent 62%)`,
-        }}
-      />
-    </Box>
-  );
-}
 
 /** Home: brand hero over the next launch's photo, then what's coming up. */
 export default function Home() {
@@ -60,7 +15,7 @@ export default function Home() {
   return (
     <Box>
       <Box as="section" aria-label="Introduction" position="relative" overflow="hidden">
-        <HeroPhoto />
+        <HomeHeroPhoto />
         <Container maxW="7xl" position="relative">
           <Flex
             minH={{ lg: "680px" }}
