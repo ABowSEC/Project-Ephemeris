@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Box, Flex, HStack, Heading, Text, VStack } from '@chakra-ui/react';
 import { withAlpha } from '../utils/color';
 import { providerInitials } from '../utils/launchFields';
+import { useImageStatus } from '../hooks/useImageStatus';
 
 export interface LaunchHeroProps {
   image?: string | null;
@@ -19,32 +20,6 @@ export interface LaunchHeroProps {
   metaLine?: ReactNode;
   /** Right-side "Time to Launch" panel's content: a countdown, a spinner, or nothing. */
   countdown: ReactNode;
-}
-
-type ImageStatus = 'loading' | 'ready' | 'failed';
-
-/** Whether a background image loaded. CSS background-image fails silently. */
-function useImageStatus(src: string | null | undefined): ImageStatus {
-  const [status, setStatus] = useState<{ src: string | null | undefined; value: ImageStatus }>({
-    src,
-    value: src ? 'loading' : 'failed',
-  });
-
-  useEffect(() => {
-    if (!src) return;
-    let cancelled = false;
-    const img = new Image();
-    img.onload = () => !cancelled && setStatus({ src, value: 'ready' });
-    img.onerror = () => !cancelled && setStatus({ src, value: 'failed' });
-    img.src = src;
-    return () => {
-      cancelled = true;
-    };
-  }, [src]);
-
-  // A new src starts over without waiting a render for the effect
-  if (status.src !== src) return src ? 'loading' : 'failed';
-  return status.value;
 }
 
 /**

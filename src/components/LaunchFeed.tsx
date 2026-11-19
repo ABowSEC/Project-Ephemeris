@@ -58,7 +58,7 @@ function CardTiming({ launch }: { launch: LaunchListItem }) {
         </Text>
       )}
       <Text as="span" color="text.secondary" noOfLines={1}>
-        {formatNetShort(launch)}
+        {formatNetShort(launch, { weekday: !lead })}
       </Text>
     </HStack>
   );

@@ -4,7 +4,7 @@ import { ArrowForwardIcon } from "@chakra-ui/icons";
 import { useUpcomingLaunches } from "../../hooks/useUpcomingLaunches";
 import { useLaunchCountdown } from "../../hooks/useCountdown";
 import { hasFlown } from "../../data/launchStatus";
-import { formatNet, launchPath, providerName } from "../../utils/launchFields";
+import { formatNetShort, launchPath, providerName, shortSite } from "../../utils/launchFields";
 import StatusBadge from "../StatusBadge";
 import type { LaunchListItem } from "../../types/launchLibrary";
 
@@ -19,7 +19,9 @@ function ShortCountdown({ launch }: { launch: LaunchListItem }) {
     <Text
       fontFamily="mono"
       fontSize="sm"
-      color="accent.terminal"
+      color="text.primary"
+      minW={{ sm: "84px" }}
+      textAlign="right"
       whiteSpace="nowrap"
       sx={{ fontVariantNumeric: "tabular-nums" }}
     >
@@ -41,16 +43,16 @@ export default function ComingUpStrip() {
   return (
     <Box as="section" aria-labelledby="coming-up-heading">
       <Flex align="baseline" justify="space-between" mb={4} gap={4}>
-        <Heading id="coming-up-heading" as="h2" size="md" color="text.primary">
+        <Heading id="coming-up-heading" as="h2" variant="section" fontSize={{ base: "24px", md: "32px" }}>
           Coming up
         </Heading>
         <Link
           as={RouterLink}
           to="/launches"
-          fontSize="sm"
-          color="brand.300"
+          textStyle="label"
+          color="accent.primary"
           whiteSpace="nowrap"
-          _hover={{ color: "brand.200" }}
+          _hover={{ color: "brand.100" }}
         >
           See all launches <ArrowForwardIcon />
         </Link>
@@ -59,7 +61,7 @@ export default function ComingUpStrip() {
       <VStack align="stretch" spacing={0} borderTop="1px solid" borderColor="border.default">
         {loading
           ? Array.from({ length: COUNT }, (_, i) => (
-              <Skeleton key={i} h="64px" my={2} borderRadius="md" />
+              <Skeleton key={i} h="64px" my={2} borderRadius="sm" />
             ))
           : upcoming.map((launch) => (
               <Flex
@@ -68,7 +70,7 @@ export default function ComingUpStrip() {
                 to={launchPath(launch)}
                 data-group
                 align="center"
-                gap={{ base: 3, md: 5 }}
+                gap={{ base: 3, md: 6 }}
                 py={4}
                 px={{ base: 1, md: 2 }}
                 borderBottom="1px solid"
@@ -76,18 +78,35 @@ export default function ComingUpStrip() {
                 transition="background 0.2s"
                 _hover={{ bg: "whiteAlpha.50", textDecoration: "none" }}
               >
+                <Text
+                  display={{ base: "none", md: "block" }}
+                  w="190px"
+                  flexShrink={0}
+                  fontFamily="mono"
+                  fontSize="sm"
+                  color="text.secondary"
+                  sx={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  {formatNetShort(launch)}
+                </Text>
                 <Box flex="1" minW={0}>
                   <Text
                     fontWeight="600"
                     color="text.primary"
                     noOfLines={1}
+                    title={launch.name}
                     _groupHover={{ color: "brand.300" }}
                     transition="color 0.2s"
                   >
                     {launch.name}
                   </Text>
                   <Text fontSize="xs" color="text.secondary" noOfLines={1} mt={0.5}>
-                    {[providerName(launch), formatNet(launch)].filter(Boolean).join(" · ")}
+                    <Box as="span" display={{ md: "none" }}>
+                      {[providerName(launch), formatNetShort(launch)].filter(Boolean).join(" · ")}
+                    </Box>
+                    <Box as="span" display={{ base: "none", md: "inline" }}>
+                      {[providerName(launch), shortSite(launch)].filter(Boolean).join(" · ")}
+                    </Box>
                   </Text>
                 </Box>
                 <HStack spacing={3} flexShrink={0}>

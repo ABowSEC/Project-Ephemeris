@@ -54,12 +54,22 @@ export function formatNet(launch: AnyLaunch | null | undefined): string {
   return vague ? `NET ${formatted}` : formatted;
 }
 
-/** Compact date for cards: "Sat, Nov 21 · 5:30 AM", or formatNet when vague. */
-export function formatNetShort(launch: AnyLaunch | null | undefined): string {
+/**
+ * Compact date for cards and lists: "Sat, Nov 21 · 5:30 AM" when the time is
+ * firm, "NET Fri, Nov 20" or "NET Nov 2026" when it isn't.
+ */
+export function formatNetShort(launch: AnyLaunch | null | undefined, { weekday = true } = {}): string {
   const date = launchDate(launch);
+  if (!date) return formatNet(launch);
   const abbrev = launch?.net_precision?.abbrev ?? 'MIN';
-  if (!date || !['SEC', 'MIN', 'HOUR'].includes(abbrev)) return formatNet(launch);
-  const day = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  if (abbrev === 'MONTH') {
+    return `NET ${date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
+  }
+  if (abbrev.startsWith('Q') || abbrev === 'YEAR' || abbrev === 'H1' || abbrev === 'H2') {
+    return formatNet(launch);
+  }
+  const day = date.toLocaleDateString(undefined, { weekday: weekday ? 'short' : undefined, month: 'short', day: 'numeric' });
+  if (abbrev !== 'SEC' && abbrev !== 'MIN') return `NET ${day}`;
   const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   return `${day} · ${time}`;
 }
