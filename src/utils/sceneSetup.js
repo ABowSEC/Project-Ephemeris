@@ -228,23 +228,28 @@ export function createSolarSystemScene(width, height, options = {}) {
   };
 }
 
-/** Keeps camera and renderer sized to the container. Returns a cleanup function. */
+/**
+ * Keeps camera and renderer sized to the container. Watches the container
+ * itself, not just the window, so layout changes (a sidebar, a grid column)
+ * resize the scene too. Returns a cleanup function.
+ */
 export function setupResizeHandler(camera, renderer, container) {
   const handleResize = () => {
     if (!container) return;
-    
     const width = container.clientWidth;
     const height = container.clientHeight;
-    
+    if (!width || !height) return;
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
   };
 
+  if (typeof ResizeObserver !== "undefined" && container) {
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }
+
   window.addEventListener("resize", handleResize);
-  
-  // Return cleanup function
-  return () => {
-    window.removeEventListener("resize", handleResize);
-  };
-} 
+  return () => window.removeEventListener("resize", handleResize);
+}

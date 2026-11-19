@@ -16,11 +16,11 @@ import { withAlpha } from "../utils/color";
 const IDLE_DELAY_MS = 1500;
 const IDLE_SPIN_RAD_PER_SEC = 0.05;
 
-// Terminal green: this app's own convention for LIVE data (see theme.js:
-// "terminal green marks LIVE data"), which an upcoming launch site is.
-const POINT_COLOR = '#00FF9D';
-const HOVER_COLOR = '#B6FFE0'; // lighter tint of the same green
-const SELECTED_COLOR = '#FFFFFF'; // unambiguous "this one" against the green field
+// Neutral sites, teal for the selected one (teal = interactive/selected).
+// Green is reserved for launches that are live right now.
+const POINT_COLOR = '#F0F0FA';
+const HOVER_COLOR = '#FFFFFF';
+const SELECTED_COLOR = '#2DD4BF';
 
 function basePointRadius(site) {
   return 0.45 + Math.min(site.launches.length, 10) * 0.06;
@@ -426,10 +426,10 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
         left={0}
         px={2}
         py={0.5}
-        borderRadius="md"
-        bg="blackAlpha.800"
+        borderRadius="sm"
+        bg="bg.elevated"
         border="1px solid"
-        borderColor="rgba(0,255,157,0.5)"
+        borderColor="border.control"
         color="white"
         fontSize="xs"
         fontWeight="600"
