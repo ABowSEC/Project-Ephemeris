@@ -54,6 +54,32 @@ export function formatNet(launch: AnyLaunch | null | undefined): string {
   return vague ? `NET ${formatted}` : formatted;
 }
 
+/**
+ * Compact date for cards and lists: "Sat, Nov 21 · 5:30 AM" when the time is
+ * firm, "NET Fri, Nov 20" or "NET Nov 2026" when it isn't.
+ */
+export function formatNetShort(launch: AnyLaunch | null | undefined, { weekday = true } = {}): string {
+  const date = launchDate(launch);
+  if (!date) return formatNet(launch);
+  const abbrev = launch?.net_precision?.abbrev ?? 'MIN';
+  if (abbrev === 'MONTH') {
+    return `NET ${date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
+  }
+  if (abbrev.startsWith('Q') || abbrev === 'YEAR' || abbrev === 'H1' || abbrev === 'H2') {
+    return formatNet(launch);
+  }
+  const day = date.toLocaleDateString(undefined, { weekday: weekday ? 'short' : undefined, month: 'short', day: 'numeric' });
+  if (abbrev !== 'SEC' && abbrev !== 'MIN') return `NET ${day}`;
+  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${day} · ${time}`;
+}
+
+/** Short site name for tight spaces: "Vandenberg SFB" from "Vandenberg SFB, CA, USA". */
+export function shortSite(launch: AnyLaunch | null | undefined): string | null {
+  const name = launch?.pad?.location?.name ?? launch?.pad?.name;
+  return name ? name.split(',')[0].trim() : null;
+}
+
 /** True when the T-0 is firm enough that a ticking countdown is meaningful. */
 export function hasPreciseTime(launch: AnyLaunch | null | undefined): boolean {
   const abbrev = launch?.net_precision?.abbrev;
@@ -158,6 +184,26 @@ export function rocketFamily(launch: AnyLaunch | null | undefined): string | nul
 /** Pad country as ISO alpha-3, e.g. "USA". */
 export function padCountryCode(launch: AnyLaunch | null | undefined): string | null {
   return launch?.pad?.country?.alpha_3_code ?? launch?.pad?.location?.country_code ?? null;
+}
+
+const MINOR_WORDS = new Set(['of', 'and', 'the', 'for', 'de', 'du']);
+
+/**
+ * Provider initials: a short parenthesized abbreviation if there is one
+ * ("CNES"), else initials of the main words ("MHI"), max four letters.
+ */
+export function providerInitials(name: string): string {
+  const paren = name.match(/\(([A-Za-z]{2,5})\)/);
+  if (paren) return paren[1].toUpperCase();
+  const words = name
+    .replace(/\(.*?\)/g, '')
+    .split(/[\s-]+/)
+    .filter((w) => w && !MINOR_WORDS.has(w.toLowerCase()));
+  return words
+    .slice(0, 4)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
 }
 
 /** "Space Launch Complex 40, Cape Canaveral SFS, FL, USA" */

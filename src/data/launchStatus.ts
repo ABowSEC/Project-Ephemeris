@@ -1,53 +1,76 @@
 // Launch status labels and colors for the whole app. Keyed by
 // `status.abbrev`, which is stable; `name` wording has changed before.
+//
+// Badges are neutral by default. Only states that mean something get a
+// signal color (see DESIGN.md): live = In Flight, caution = Hold and Partial
+// Failure, danger = Failure.
 
 import type { LaunchStatus } from '../types/launchLibrary';
 
+export type StatusTone = 'neutral' | 'muted' | 'live' | 'caution' | 'danger';
+
 export interface StatusStyle {
-  /** Short label for badges. */
+  /** Full name, for filters and tooltips. */
   label: string;
-  /** Chakra colorScheme, for Badge/Button. */
-  colorScheme: string;
-  /** Explicit hex for the map's SVG dots, which can't use a colorScheme. */
+  /** Short badge text. */
+  short: string;
+  tone: StatusTone;
+  /** Explicit hex for the map's SVG dots, which can't use theme tokens. */
   dot: string;
   /** True once the launch has flown and its record is final. */
   terminal: boolean;
 }
 
-const STATUSES: Record<string, StatusStyle> = {
-  Go: { label: 'Go for Launch', colorScheme: 'green', dot: '#38A169', terminal: false },
-  TBC: { label: 'To Be Confirmed', colorScheme: 'yellow', dot: '#D69E2E', terminal: false },
-  TBD: { label: 'To Be Determined', colorScheme: 'gray', dot: '#718096', terminal: false },
-  Hold: { label: 'On Hold', colorScheme: 'orange', dot: '#DD6B20', terminal: false },
-  'In Flight': { label: 'In Flight', colorScheme: 'blue', dot: '#3182CE', terminal: false },
-  Success: { label: 'Success', colorScheme: 'green', dot: '#38A169', terminal: true },
-  Failure: { label: 'Failure', colorScheme: 'red', dot: '#E53E3E', terminal: true },
-  'Partial Failure': {
-    label: 'Partial Failure',
-    colorScheme: 'orange',
-    dot: '#DD6B20',
-    terminal: true,
-  },
+/** Theme tokens per tone, for the badge's text and border. */
+export const TONE_COLORS: Record<StatusTone, { color: string; borderColor: string }> = {
+  neutral: { color: 'text.primary', borderColor: 'border.control' },
+  muted: { color: 'text.secondary', borderColor: 'border.default' },
+  live: { color: 'accent.terminal', borderColor: 'accent.terminal' },
+  caution: { color: 'accent.stale', borderColor: 'accent.stale' },
+  danger: { color: 'accent.danger', borderColor: 'accent.danger' },
 };
 
-const UNKNOWN: StatusStyle = {
-  label: 'Unknown',
-  colorScheme: 'gray',
-  dot: '#718096',
-  terminal: false,
+const DOTS: Record<StatusTone, string> = {
+  neutral: '#F0F0FA',
+  muted: '#6E747D',
+  live: '#00FF9D',
+  caution: '#ED8936',
+  danger: '#FF3B30',
 };
+
+const status = (label: string, short: string, tone: StatusTone, terminal = false): StatusStyle => ({
+  label,
+  short,
+  tone,
+  dot: DOTS[tone],
+  terminal,
+});
+
+const STATUSES: Record<string, StatusStyle> = {
+  Go: status('Go for Launch', 'Go', 'neutral'),
+  TBC: status('To Be Confirmed', 'TBC', 'muted'),
+  TBD: status('To Be Determined', 'TBD', 'muted'),
+  Hold: status('On Hold', 'Hold', 'caution'),
+  'In Flight': status('In Flight', 'Live', 'live'),
+  Success: status('Success', 'Success', 'neutral', true),
+  Failure: status('Failure', 'Failed', 'danger', true),
+  'Partial Failure': status('Partial Failure', 'Partial failure', 'caution', true),
+};
+
+const UNKNOWN = status('Unknown', 'Unknown', 'muted');
 
 /** Style for a launch status. Unknown statuses show their own name. */
-export function statusStyle(status: LaunchStatus | null | undefined): StatusStyle {
-  if (!status) return UNKNOWN;
-  const known = STATUSES[status.abbrev];
+export function statusStyle(launchStatus: LaunchStatus | null | undefined): StatusStyle {
+  if (!launchStatus) return UNKNOWN;
+  const known = STATUSES[launchStatus.abbrev];
   if (known) return known;
-  return { ...UNKNOWN, label: status.name || UNKNOWN.label };
+  const name = launchStatus.name || UNKNOWN.label;
+  return { ...UNKNOWN, label: name, short: name };
 }
 
 /** True once the launch has flown, whatever the outcome. */
-export function hasFlown(status: LaunchStatus | null | undefined): boolean {
-  return statusStyle(status).terminal;
+export function hasFlown(launchStatus: LaunchStatus | null | undefined): boolean {
+  return statusStyle(launchStatus).terminal;
 }
 
 /** Abbrev/label pairs for the filter dropdown, in schedule order. */

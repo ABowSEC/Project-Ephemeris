@@ -154,13 +154,14 @@ function Navigation() {
                   to={path}
                   px={3}
                   py={1}
-                  borderRadius="md"
-                  fontSize="sm"
-                  fontWeight={isActive ? '600' : '400'}
-                  color={isActive ? 'brand.300' : 'text.secondary'}
+                  borderRadius="sm"
+                  textStyle="label"
+                  aria-current={isActive ? 'page' : undefined}
+                  color={isActive ? 'text.primary' : 'text.secondary'}
+                  boxShadow={isActive ? 'inset 0 -2px 0 var(--chakra-colors-brand-200)' : undefined}
                   _hover={{
                     textDecoration: 'none',
-                    color: isActive ? 'brand.200' : 'white',
+                    color: 'text.primary',
                     bg: 'whiteAlpha.50',
                   }}
                   transition="all 0.15s"

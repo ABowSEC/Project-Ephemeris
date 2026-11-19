@@ -17,10 +17,10 @@ export default function NavDiscoverMenu({ isActive }: { isActive: boolean }) {
         variant="ghost"
         size="sm"
         px={3}
-        fontSize="sm"
-        fontWeight={isActive ? '600' : '400'}
-        color={isActive ? 'brand.300' : 'text.secondary'}
-        _hover={{ color: isActive ? 'brand.200' : 'white', bg: 'whiteAlpha.50' }}
+        fontSize="12px"
+        color={isActive ? 'text.primary' : 'text.secondary'}
+        boxShadow={isActive ? 'inset 0 -2px 0 var(--chakra-colors-brand-200)' : undefined}
+        _hover={{ color: 'text.primary', bg: 'whiteAlpha.50' }}
         _active={{ bg: 'whiteAlpha.100' }}
       >
         Discover

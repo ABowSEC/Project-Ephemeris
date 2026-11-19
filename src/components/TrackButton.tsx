@@ -27,7 +27,7 @@ export default function TrackButton({ launch, size = 'sm' }: TrackButtonProps) {
         icon={tracked ? <FaStar /> : <FaRegStar />}
         size={size}
         variant="ghost"
-        color={tracked ? 'accent.tracked' : 'text.secondary'}
+        color={tracked ? 'accent.tracked' : 'text.primary'}
         _hover={{ color: 'amber.100', bg: 'whiteAlpha.100' }}
         onClick={(e) => {
           e.stopPropagation();
