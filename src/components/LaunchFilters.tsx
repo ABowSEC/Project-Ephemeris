@@ -1,23 +1,14 @@
 import { useMemo, type ReactNode } from 'react';
-import {
-  Button,
-  HStack,
-  Icon,
-  Input,
-  InputGroup,
-  InputLeftElement,
-  Text,
-  Wrap,
-  WrapItem,
-} from '@chakra-ui/react';
-import { CloseIcon, SearchIcon } from '@chakra-ui/icons';
-import { FaStar } from 'react-icons/fa';
+import { Box, Button, Flex, HStack, Input, InputGroup, InputLeftElement, Text, VStack } from '@chakra-ui/react';
+import { SearchIcon } from '@chakra-ui/icons';
+import { FaRegStar, FaStar } from 'react-icons/fa';
 import FilterSelect from './FilterSelect';
+import { filterChip } from './filterChip';
 import { FILTERABLE_STATUSES } from '../data/launchStatus';
 import type { LaunchFilterState } from '../hooks/useLaunchFilters';
 
 // The first entry of each list is the "no filter" state, and FilterSelect
-// falls back to it when nothing is selected.
+// shows its own label while that is selected.
 const TIMEFRAMES = [
   { value: 'all', label: 'All upcoming' },
   { value: '7', label: 'Next 7 days' },
@@ -32,13 +23,17 @@ const STATUS_OPTIONS = [
 
 interface LaunchFiltersProps {
   state: LaunchFilterState;
-  /** Rendered beside the Tracked toggle (the alerts bell), so tracking controls stay together. */
+  /** Rendered after the Tracked toggle (the alerts bell), so tracking controls stay together. */
   trackingControls?: ReactNode;
 }
 
-/** The controls themselves. State comes from useLaunchFilters. */
+/**
+ * Search plus one row of filter chips. On phones the chips scroll sideways
+ * instead of stacking. State comes from useLaunchFilters.
+ */
 export default function LaunchFilters({ state, trackingControls }: LaunchFiltersProps) {
   const { values, setFilter, reset, providers, trackedCount, activeCount, filtered, total } = state;
+  const trackedOn = values.tracked === '1';
 
   // providers is rebuilt whenever the feed changes; this keeps the option
   // array stable between those changes.
@@ -51,82 +46,83 @@ export default function LaunchFilters({ state, trackingControls }: LaunchFilters
   );
 
   return (
-    <>
-      <Wrap spacing={3} align="center">
-        <WrapItem flex="1 1 240px" minW="200px">
-          <InputGroup size="sm">
-            <InputLeftElement pointerEvents="none">
-              <SearchIcon color="text.secondary" boxSize={3} />
-            </InputLeftElement>
-            <Input
-              value={values.q}
-              onChange={(e) => setFilter('q', e.target.value)}
-              placeholder="Search missions, rockets, providers"
-              borderRadius="md"
-              aria-label="Search launches"
-            />
-          </InputGroup>
-        </WrapItem>
+    <VStack align="stretch" spacing={3} role="search">
+      <Flex gap={2.5} direction={{ base: 'column', md: 'row' }} align={{ md: 'center' }} wrap={{ md: 'wrap' }}>
+        <InputGroup flex={{ md: '1 1 260px' }} minW={{ md: '220px' }}>
+          <InputLeftElement pointerEvents="none" h="44px">
+            <SearchIcon color="text.secondary" boxSize={3.5} />
+          </InputLeftElement>
+          <Input
+            h="44px"
+            value={values.q}
+            onChange={(e) => setFilter('q', e.target.value)}
+            placeholder="Search missions, rockets, providers"
+            aria-label="Search launches"
+          />
+        </InputGroup>
 
-        <WrapItem>
+        <HStack
+          spacing={2}
+          overflowX={{ base: 'auto', md: 'visible' }}
+          flexWrap={{ base: 'nowrap', md: 'wrap' }}
+          mx={{ base: -4, md: 0 }}
+          px={{ base: 4, md: 0 }}
+          pb={{ base: 0.5, md: 0 }}
+          sx={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
+        >
           <FilterSelect
-            label="provider"
+            label="Timeframe"
+            value={values.days}
+            options={TIMEFRAMES}
+            onChange={(value) => setFilter('days', value)}
+          />
+          <FilterSelect
+            label="Provider"
             value={values.provider}
             options={providerOptions}
             onChange={(value) => setFilter('provider', value)}
             maxW="220px"
           />
-        </WrapItem>
-
-        <WrapItem>
           <FilterSelect
-            label="status"
+            label="Status"
             value={values.status}
             options={STATUS_OPTIONS}
             onChange={(value) => setFilter('status', value)}
           />
-        </WrapItem>
-
-        <WrapItem>
-          <FilterSelect
-            label="timeframe"
-            value={values.days}
-            options={TIMEFRAMES}
-            onChange={(value) => setFilter('days', value)}
-          />
-        </WrapItem>
-
-        <WrapItem>
-          <HStack spacing={2}>
-            <Button
-              size="sm"
-              variant={values.tracked === '1' ? 'solid' : 'outline'}
-              colorScheme="amber"
-              leftIcon={<Icon as={FaStar} boxSize={3} />}
-              onClick={() => setFilter('tracked', values.tracked === '1' ? '' : '1')}
-            >
-              Tracked{trackedCount > 0 ? ` (${trackedCount})` : ''}
-            </Button>
-            {trackingControls}
-          </HStack>
-        </WrapItem>
-
-        {activeCount > 0 && (
-          <WrapItem>
-            <Button size="sm" variant="ghost" leftIcon={<CloseIcon boxSize={2} />} onClick={reset}>
-              Clear
-            </Button>
-          </WrapItem>
-        )}
-      </Wrap>
-
-      {activeCount > 0 && (
-        <HStack spacing={1}>
-          <Text fontSize="sm" color="text.secondary">
-            {filtered.length} of {total} launches match
-          </Text>
+          <Button
+            {...filterChip}
+            textTransform="none"
+            letterSpacing="normal"
+            aria-pressed={trackedOn}
+            leftIcon={<Box as={trackedOn ? FaStar : FaRegStar} color="accent.tracked" boxSize={3.5} />}
+            borderColor={trackedOn ? 'accent.tracked' : 'border.control'}
+            color={trackedOn ? 'accent.tracked' : 'text.primary'}
+            onClick={() => setFilter('tracked', trackedOn ? '' : '1')}
+          >
+            Tracked
+            {trackedCount > 0 && (
+              <Text as="span" color="text.secondary" ml={1.5}>
+                {trackedCount}
+              </Text>
+            )}
+          </Button>
+          {trackingControls}
         </HStack>
-      )}
-    </>
+      </Flex>
+
+      <HStack spacing={3} fontSize="sm" color="text.secondary" minH="24px">
+        <Text as="span" aria-live="polite">
+          <Text as="span" color="text.primary" fontWeight="600">
+            {filtered.length}
+          </Text>{' '}
+          of {total} launches
+        </Text>
+        {activeCount > 0 && (
+          <Button variant="link" size="sm" color="accent.primary" textTransform="none" letterSpacing="normal" fontWeight="500" onClick={reset}>
+            Clear filters
+          </Button>
+        )}
+      </HStack>
+    </VStack>
   );
 }

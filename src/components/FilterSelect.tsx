@@ -9,6 +9,7 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
+import { filterChip, filterChipActive } from './filterChip';
 
 // Dropdown built on Menu, since a native <select>'s popup can't be styled
 // dark reliably. Trade-off: phones get an in-page list, not the OS picker.
@@ -25,7 +26,7 @@ export default function FilterSelect({
   onChange,
   maxW,
 }: {
-  /** What this filters, e.g. "provider". Used for the accessible name. */
+  /** What this filters, e.g. "Provider". Shown while unset, and the accessible name. */
   label: string;
   value: string;
   options: FilterOption[];
@@ -35,6 +36,7 @@ export default function FilterSelect({
   // Falls back to the first option, which is the "no filter" entry
   // ("All providers", "Any status", "All upcoming").
   const selected = options.find((option) => option.value === value) ?? options[0];
+  const active = selected !== options[0];
 
   return (
     // isLazy: a closed list would otherwise still render every option in the
@@ -42,36 +44,17 @@ export default function FilterSelect({
     <Menu placement="bottom-start" autoSelect={false} matchWidth={false} isLazy>
       <MenuButton
         type="button"
-        aria-label={`Filter by ${label}`}
-        // Styled like the search input next to it (Chakra size="sm").
-        h="32px"
-        minW="140px"
+        aria-label={`Filter by ${label.toLowerCase()}: ${selected?.label}`}
         maxW={maxW}
-        px={3}
-        display="flex"
-        alignItems="center"
-        gap={2}
-        borderRadius="md"
-        border="1px solid"
-        bg="bg.elevated"
-        borderColor="border.control"
-        color="text.primary"
-        fontSize="sm"
-        textAlign="left"
-        transition="border-color 0.15s"
-        _hover={{ borderColor: 'border.controlHover' }}
-        _focusVisible={{
-          borderColor: 'brand.400',
-          boxShadow: '0 0 0 1px var(--chakra-colors-brand-400)',
-          outline: 'none',
-        }}
-        _expanded={{ borderColor: 'brand.400' }}
+        {...filterChip}
+        {...(active ? filterChipActive : {})}
+        _expanded={{ borderColor: 'accent.primary' }}
       >
         <Box display="flex" alignItems="center" gap={2}>
           <Text as="span" noOfLines={1} flex={1} minW={0}>
-            {selected?.label}
+            {active ? selected?.label : label}
           </Text>
-          <ChevronDownIcon boxSize={4} flexShrink={0} color="text.secondary" />
+          <ChevronDownIcon boxSize={4} flexShrink={0} color={active ? 'accent.primary' : 'text.secondary'} />
         </Box>
       </MenuButton>
 

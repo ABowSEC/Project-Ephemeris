@@ -1,6 +1,7 @@
 import { Box, Button, Tooltip, useToast } from '@chakra-ui/react';
 import { FaBell, FaRegBell } from 'react-icons/fa';
 import { useAlertsEnabled } from '../hooks/useLaunchAlerts';
+import { filterChip } from './filterChip';
 
 /**
  * Bell toggle for launch alerts (tracked launches only, hence its spot next to
@@ -60,9 +61,12 @@ export default function AlertSettings() {
         aria-pressed={enabled}
         leftIcon={enabled ? <FaBell /> : <FaRegBell />}
         iconSpacing={{ base: 0, sm: 2 }}
-        size="sm"
-        variant={enabled ? 'solid' : 'outline'}
-        colorScheme="amber"
+        {...filterChip}
+        textTransform="none"
+        letterSpacing="normal"
+        borderColor={enabled ? 'accent.tracked' : 'border.control'}
+        color={enabled ? 'accent.tracked' : 'text.primary'}
+        px={{ base: 3.5, sm: 4 }}
         onClick={() => (enabled ? setEnabled(false) : enableAlerts())}
       >
         <Box as="span" display={{ base: 'none', sm: 'inline' }}>

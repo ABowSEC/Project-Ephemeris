@@ -54,6 +54,22 @@ export function formatNet(launch: AnyLaunch | null | undefined): string {
   return vague ? `NET ${formatted}` : formatted;
 }
 
+/** Compact date for cards: "Sat, Nov 21 · 5:30 AM", or formatNet when vague. */
+export function formatNetShort(launch: AnyLaunch | null | undefined): string {
+  const date = launchDate(launch);
+  const abbrev = launch?.net_precision?.abbrev ?? 'MIN';
+  if (!date || !['SEC', 'MIN', 'HOUR'].includes(abbrev)) return formatNet(launch);
+  const day = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${day} · ${time}`;
+}
+
+/** Short site name for tight spaces: "Vandenberg SFB" from "Vandenberg SFB, CA, USA". */
+export function shortSite(launch: AnyLaunch | null | undefined): string | null {
+  const name = launch?.pad?.location?.name ?? launch?.pad?.name;
+  return name ? name.split(',')[0].trim() : null;
+}
+
 /** True when the T-0 is firm enough that a ticking countdown is meaningful. */
 export function hasPreciseTime(launch: AnyLaunch | null | undefined): boolean {
   const abbrev = launch?.net_precision?.abbrev;

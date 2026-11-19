@@ -23,8 +23,8 @@ export default function ProviderMark({ name, size = 52 }: { name: string | null;
 
   if (logo && !failed) {
     return (
-      <Box bg="whiteAlpha.900" borderRadius="lg" p={1.5} boxShadow="0 2px 8px rgba(0,0,0,0.4)" flexShrink={0}>
-        <Image src={logo} alt="" boxSize={`${size - 12}px`} objectFit="contain" onError={() => setFailed(true)} />
+      <Box bg="whiteAlpha.900" borderRadius="sm" p={size < 44 ? 1 : 1.5} flexShrink={0}>
+        <Image src={logo} alt="" boxSize={`${size - (size < 44 ? 8 : 12)}px`} objectFit="contain" onError={() => setFailed(true)} />
       </Box>
     );
   }
@@ -37,11 +37,10 @@ export default function ProviderMark({ name, size = 52 }: { name: string | null;
       display="flex"
       alignItems="center"
       justifyContent="center"
-      borderRadius="lg"
+      borderRadius="sm"
       bg="bg.elevated"
       border="1px solid"
       borderColor="border.control"
-      boxShadow="0 2px 8px rgba(0,0,0,0.4)"
       aria-hidden="true"
     >
       <Text
