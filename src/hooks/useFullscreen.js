@@ -1,56 +1,40 @@
 import { useState, useCallback, useEffect } from 'react';
 
-/** Fullscreen state and toggle for the element in `elementRef`. */
+/**
+ * Fullscreen state and toggle for the element in `elementRef`. State follows
+ * the browser's fullscreenchange event only: a request can be refused (an
+ * embedded frame, iPhone Safari), and setting it optimistically left callers
+ * believing they were fullscreen when they weren't.
+ */
 export function useFullscreen(elementRef) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      elementRef.current?.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  }, [elementRef]);
-
   const enterFullscreen = useCallback(() => {
-    if (!document.fullscreenElement && elementRef.current) {
-      elementRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    }
+    const el = elementRef.current;
+    if (document.fullscreenElement || !el?.requestFullscreen) return;
+    el.requestFullscreen().catch(() => {});
   }, [elementRef]);
 
   const exitFullscreen = useCallback(() => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }, []);
 
-  // Listen for fullscreen change events
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) exitFullscreen();
+    else enterFullscreen();
+  }, [enterFullscreen, exitFullscreen]);
+
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      setIsFullscreen(Boolean(document.fullscreenElement) && document.fullscreenElement === elementRef.current);
     };
-
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange); // Safari
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange); // Firefox
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange); // IE
-
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
-  }, []);
+  }, [elementRef]);
 
-  return {
-    isFullscreen,
-    toggleFullscreen,
-    enterFullscreen,
-    exitFullscreen
-  };
-} 
+  return { isFullscreen, toggleFullscreen, enterFullscreen, exitFullscreen };
+}
