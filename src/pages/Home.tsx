@@ -2,7 +2,9 @@ import { Box, Button, Container, Flex, Heading, Stack, Text, VStack } from "@cha
 import { Link as RouterLink } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { useHeroPhoto } from "../hooks/useHeroPhoto";
 import HomeHeroPhoto from "../components/home/HomeHeroPhoto";
+import HeroPhotoSwitcher from "../components/home/HeroPhotoSwitcher";
 import NextLaunchPanel from "../components/home/NextLaunchPanel";
 import ComingUpStrip from "../components/home/ComingUpStrip";
 import ApodFeature from "../components/home/ApodFeature";
@@ -11,11 +13,12 @@ import DiscoverLinks from "../components/home/DiscoverLinks";
 /** Home: brand hero over the next launch's photo, then what's coming up. */
 export default function Home() {
   usePageMeta("/");
+  const heroPhoto = useHeroPhoto();
 
   return (
     <Box>
       <Box as="section" aria-label="Introduction" position="relative" overflow="hidden">
-        <HomeHeroPhoto />
+        <HomeHeroPhoto current={heroPhoto.current} />
         <Container maxW="7xl" position="relative">
           <Flex
             minH={{ lg: "680px" }}
@@ -72,7 +75,10 @@ export default function Home() {
               </Stack>
             </VStack>
 
-            <NextLaunchPanel />
+            <VStack spacing={2} w={{ base: "100%", md: "380px" }} flexShrink={0} align="stretch">
+              <NextLaunchPanel />
+              <HeroPhotoSwitcher {...heroPhoto} />
+            </VStack>
           </Flex>
         </Container>
       </Box>
