@@ -21,11 +21,11 @@ export default function Home() {
         <HomeHeroPhoto current={heroPhoto.current} />
         <Container maxW="7xl" position="relative">
           <Flex
-            minH={{ lg: "680px" }}
-            pt={{ base: "220px", lg: 24 }}
+            minH={{ lg: "600px" }}
+            pt={{ base: "200px", lg: 16 }}
             pb={{ base: 8, lg: 16 }}
             direction={{ base: "column", lg: "row" }}
-            align={{ base: "stretch", lg: "flex-end" }}
+            align={{ base: "stretch", lg: "center" }}
             justify="space-between"
             gap={{ base: 6, lg: 12 }}
           >
