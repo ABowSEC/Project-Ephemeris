@@ -4,14 +4,10 @@ import { useImageInfo } from './useImageStatus';
 import { launchImageUrl } from '../utils/launchFields';
 import { HERO_PHOTOS, heroPhotoOfTheDay, heroSrc, heroSrcSet } from '../data/heroPhotos';
 
-// Hero box heights, matching Home's layout (photo band on phones, full hero on lg)
+// Photo band height on phones, matching Home's layout
 export const HERO_PHONE_HEIGHT = 380;
-const DESKTOP_HEIGHT = 720;
-const LG = 992;
-// How far a photo may be enlarged on screen before it looks soft
-const MAX_UPSCALE = 1.3;
-// The visitor's pick, by id ("live" or a curated slug)
-const STORAGE_KEY = 'ephemeris.heroPhoto.v1';
+// The visitor's pick and the launch it was made for: { id, launch }
+const STORAGE_KEY = 'ephemeris.heroPhoto.v2';
 const LIVE = 'live';
 
 export interface HeroChoice {
@@ -22,27 +18,23 @@ export interface HeroChoice {
   caption: string;
 }
 
-/** True when a photo of this size can cover the hero without visible blur. */
-function isSharpEnough(width: number, height: number): boolean {
-  if (typeof window === 'undefined' || !width || !height) return false;
-  const boxW = window.innerWidth;
-  const boxH = boxW >= LG ? DESKTOP_HEIGHT : HERO_PHONE_HEIGHT;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const scale = Math.max(boxW / width, boxH / height) * dpr;
-  return scale <= MAX_UPSCALE;
+interface StoredPick {
+  id: string;
+  launch: string | null;
 }
 
-function readPick(): string | null {
+function readPick(): StoredPick | null {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as StoredPick) : null;
   } catch {
     return null;
   }
 }
 
-function savePick(id: string) {
+function savePick(pick: StoredPick) {
   try {
-    localStorage.setItem(STORAGE_KEY, id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pick));
   } catch {
     // Private mode or blocked storage: the pick just won't persist
   }
@@ -57,43 +49,45 @@ const CURATED: HeroChoice[] = HERO_PHOTOS.map((photo) => ({
 }));
 
 /**
- * Which Home hero photo to show. The options are the next launch's own photo
- * (only when it's sharp enough) and the curated NASA set. Default: the live
- * photo if sharp, else the photo of the day. The visitor's pick is remembered.
+ * Which Home hero photo to show. The next launch's own photo comes first and
+ * is the default whenever it loads; the curated NASA set follows (and is the
+ * default when there is no launch photo). A visitor's pick is remembered
+ * until the next launch changes, so a new launch always leads with its photo.
  */
 export function useHeroPhoto() {
   const { nextLaunch } = useUpcomingLaunches();
   const live = launchImageUrl(nextLaunch);
   const liveInfo = useImageInfo(live);
-  const [pick, setPick] = useState<string | null>(readPick);
+  const launchId = nextLaunch?.id ?? null;
+  const [pick, setPick] = useState<StoredPick | null>(readPick);
 
-  const liveSharp = Boolean(live && liveInfo.status === 'ready' && isSharpEnough(liveInfo.width, liveInfo.height));
-  // Offer nothing while the live photo is still being measured, so the
-  // curated one doesn't flash in first
-  const measuring = Boolean(live) && liveInfo.status === 'loading';
+  const liveReady = Boolean(live && liveInfo.status === 'ready');
+  // Offer nothing while the live photo loads, so a curated one doesn't flash in first
+  const waiting = Boolean(live) && liveInfo.status === 'loading';
 
   const choices = useMemo<HeroChoice[]>(
     () =>
-      liveSharp && live && nextLaunch
-        ? [{ id: LIVE, src: live, caption: `Next launch: ${nextLaunch.name}` }, ...CURATED]
+      liveReady && live && nextLaunch
+        ? [{ id: LIVE, src: live, caption: `Next launch · ${nextLaunch.name}` }, ...CURATED]
         : CURATED,
-    [liveSharp, live, nextLaunch]
+    [liveReady, live, nextLaunch]
   );
 
-  const defaultId = liveSharp ? LIVE : heroPhotoOfTheDay()?.slug;
-  const current = measuring
+  const pickedId = pick && pick.launch === launchId ? pick.id : null;
+  const defaultId = liveReady ? LIVE : heroPhotoOfTheDay()?.slug;
+  const current = waiting
     ? null
-    : choices.find((c) => c.id === pick) ?? choices.find((c) => c.id === defaultId) ?? null;
+    : choices.find((c) => c.id === pickedId) ?? choices.find((c) => c.id === defaultId) ?? null;
   const index = current ? choices.indexOf(current) : -1;
 
   const step = useCallback(
     (delta: number) => {
       if (index < 0) return;
-      const next = choices[(index + delta + choices.length) % choices.length];
-      setPick(next.id);
-      savePick(next.id);
+      const next = { id: choices[(index + delta + choices.length) % choices.length].id, launch: launchId };
+      setPick(next);
+      savePick(next);
     },
-    [choices, index]
+    [choices, index, launchId]
   );
 
   return { current, index, count: choices.length, step };
