@@ -69,7 +69,7 @@ function CountdownBlock({
         bg="rgba(0,255,157,0.05)"
         border="1px solid"
         borderColor="rgba(0,255,157,0.25)"
-        rounded="lg"
+        rounded="sm"
         px={large ? { base: 3, md: 4 } : 2.5}
         py={large ? { base: 2, md: 3 } : 1.5}
         minW={large ? { base: '56px', md: '72px' } : '48px'}

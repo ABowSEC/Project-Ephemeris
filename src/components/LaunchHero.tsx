@@ -73,16 +73,21 @@ export default function LaunchHero({
           bgImage={`url(${image})`}
           bgSize="cover"
           bgPos="center"
-          filter="brightness(0.45) saturate(0.9)"
+          filter={{ base: 'brightness(0.6) saturate(0.9)', lg: 'brightness(0.85) saturate(0.95)' }}
           transform="scale(1.06)"
           opacity={imageStatus === 'ready' ? 1 : 0}
           transition="opacity 0.4s"
         />
       )}
+      {/* Scrim behind the text only. Stacked (centered) text on small screens
+          sits over the whole image, so it gets an even wash instead. */}
       <Box
         position="absolute"
         inset={0}
-        bgImage={`linear-gradient(to right, ${withAlpha('bg.body', 95)} 25%, ${withAlpha('bg.body', 60)} 55%, ${withAlpha('bg.body', 20)})`}
+        bgImage={{
+          base: `linear-gradient(to bottom, ${withAlpha('bg.body', 55)}, ${withAlpha('bg.body', 80)})`,
+          lg: `linear-gradient(to right, ${withAlpha('bg.body', 92)} 0%, ${withAlpha('bg.body', 75)} 35%, ${withAlpha('bg.body', 10)} 70%, transparent)`,
+        }}
       />
       {bottomVignette && (
         <Box
@@ -122,7 +127,17 @@ export default function LaunchHero({
           {metaLine}
         </VStack>
 
-        <VStack spacing={3} flexShrink={0}>
+        {/* Backed panel: the photo behind it is no longer darkened */}
+        <VStack
+          spacing={3}
+          flexShrink={0}
+          bg={withAlpha('bg.body', 80)}
+          border="1px solid"
+          borderColor="border.default"
+          rounded="sm"
+          px={{ base: 4, md: 6 }}
+          py={{ base: 4, md: 5 }}
+        >
           <Text
             fontSize="10px"
             color="text.secondary"

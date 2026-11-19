@@ -1,6 +1,6 @@
 import { Badge, Box, Button, HStack, Icon, Link, Text, VStack } from '@chakra-ui/react';
 import { ExternalLinkIcon } from '@chakra-ui/icons';
-import { FaYoutube, FaVimeo, FaBroadcastTower } from 'react-icons/fa';
+import { FaYoutube, FaVimeo, FaBroadcastTower, FaPlay } from 'react-icons/fa';
 import { embeddableVideo, officialWebcast, webcasts } from '../../utils/launchFields';
 import { hasFlown } from '../../data/launchStatus';
 import Card from '../Card';
@@ -29,8 +29,11 @@ export default function WebcastPanel({ launch }: { launch: AnyLaunch }) {
           <Text fontWeight="600">{flown ? 'Replay' : 'Official Webcast'}</Text>
         </HStack>
         {isLive && (
-          <Badge colorScheme="red" borderRadius="full" px={3}>
-            Live now
+          <Badge variant="outline" color="accent.terminal" borderColor="accent.terminal" border="1px solid" boxShadow="none" px={2}>
+            <HStack as="span" spacing={1.5}>
+              <Box as="span" w="6px" h="6px" borderRadius="full" bg="accent.terminal" />
+              <span>Live now</span>
+            </HStack>
           </Badge>
         )}
       </HStack>
@@ -51,7 +54,7 @@ export default function WebcastPanel({ launch }: { launch: AnyLaunch }) {
           />
         </Box>
       ) : (
-        <OutboundWebcast video={primary} flown={flown} />
+        <OutboundWebcast video={primary} flown={flown} isLive={isLive} />
       )}
 
       {others.length > 0 && (
@@ -69,7 +72,7 @@ export default function WebcastPanel({ launch }: { launch: AnyLaunch }) {
               _hover={{ color: 'brand.200' }}
             >
               {video.publisher ?? video.source ?? 'Stream'}
-              {video.title ? ` — ${video.title}` : ''} <ExternalLinkIcon mx="2px" mb="2px" />
+              {video.title ? `: ${video.title}` : ''} <ExternalLinkIcon mx="2px" mb="2px" />
             </Link>
           ))}
         </VStack>
@@ -78,10 +81,11 @@ export default function WebcastPanel({ launch }: { launch: AnyLaunch }) {
   );
 }
 
-/** Card for a webcast we are not allowed to frame. */
-function OutboundWebcast({ video, flown }: { video: VideoUrl; flown: boolean }) {
+/** Card for a webcast we are not allowed to frame. The page's one solid CTA. */
+function OutboundWebcast({ video, flown, isLive }: { video: VideoUrl; flown: boolean; isLive: boolean }) {
   const publisher = video.publisher ?? video.source ?? 'the broadcaster';
-  const icon = video.url.includes('vimeo') ? FaVimeo : FaYoutube;
+  const icon = video.url.includes('vimeo') ? FaVimeo : /youtu.?be/.test(video.url) ? FaYoutube : FaPlay;
+  const label = flown ? 'Watch the replay' : isLive ? 'Watch live' : 'Watch the webcast';
 
   return (
     <VStack align="stretch" spacing={3} p={5}>
@@ -95,11 +99,11 @@ function OutboundWebcast({ video, flown }: { video: VideoUrl; flown: boolean }) 
         isExternal
         leftIcon={<Icon as={icon} />}
         rightIcon={<ExternalLinkIcon />}
-        colorScheme="red"
+        variant="solid"
         alignSelf="flex-start"
         _hover={{ textDecoration: 'none' }}
       >
-        {flown ? 'Watch the replay' : 'Watch the webcast'}
+        {label}
       </Button>
     </VStack>
   );
