@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Box, Flex, HStack, IconButton, Select, usePrefersReducedMotion } from '@chakra-ui/react';
+import { Box, Flex, HStack, IconButton, Select, Text, usePrefersReducedMotion } from '@chakra-ui/react';
 import { ChevronLeftIcon, ChevronRightIcon, ExternalLinkIcon, CloseIcon } from '@chakra-ui/icons';
 import { AnimatePresence, motion } from 'framer-motion';
 import * as THREE from 'three';
@@ -90,8 +90,9 @@ function projectLabel(site, globe, camera, renderer) {
 }
 
 /**
- * 3D Earth with upcoming launch sites. Clicking a site calls onSelectSite and
- * opens a details panel; renderSiteDetails supplies the panel body.
+ * 3D Earth with upcoming launch sites. Clicking a site calls onSelectSite.
+ * In fullscreen, where the page around it is hidden, the selected site also
+ * opens a details panel whose body comes from renderSiteDetails.
  *
  * three-globe has no click handling, so picking uses invisible hit spheres.
  */
@@ -515,7 +516,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
           flight (in the selection effect above) rotates that site into
           view, instead of a separate UI element popping over the page. */}
       <AnimatePresence>
-        {selectedSite && (
+        {selectedSite && isFullscreen && renderSiteDetails && (
           <MotionBox
             key={selectedSite.key}
             initial={{ opacity: 0, x: 24 }}
@@ -534,7 +535,10 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
             p={4}
             zIndex={8}
           >
-            <HStack justify="flex-end" mb={3}>
+            <HStack justify="space-between" align="start" mb={3} spacing={3}>
+              <Text fontWeight="600" lineHeight="1.3" color="text.primary">
+                {selectedSite.name}
+              </Text>
               <HStack spacing={1} flexShrink={0}>
                 <IconButton
                   aria-label="Previous launch site"
@@ -562,7 +566,7 @@ export default function LaunchGlobe({ sites, onSelectSite, selectedSite = null, 
                 />
               </HStack>
             </HStack>
-            {renderSiteDetails?.(selectedSite)}
+            {renderSiteDetails(selectedSite)}
           </MotionBox>
         )}
       </AnimatePresence>

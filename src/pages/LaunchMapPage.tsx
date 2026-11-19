@@ -4,7 +4,7 @@ import { useUpcomingLaunches } from "../hooks/useUpcomingLaunches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import ErrorState from "../components/ErrorState";
 import SiteMap from "../components/map/SiteMap";
-import SiteList from "../components/map/SiteList";
+import SiteList, { SiteLaunches } from "../components/map/SiteList";
 import { filterChip, filterChipActive } from "../components/filterChip";
 import { groupBySite, launchesInWindow, MAP_WINDOWS, type LaunchSite, type MapWindow } from "../utils/launchSites";
 
@@ -153,11 +153,7 @@ export default function LaunchMapPage() {
                     sites={sites}
                     selectedSite={selected}
                     onSelectSite={(site) => setSelectedKey(site?.key ?? null)}
-                    renderSiteDetails={(site) => (
-                      <Text fontSize="xs" color="text.secondary">
-                        {site.launches.length} upcoming launch{site.launches.length === 1 ? "" : "es"}
-                      </Text>
-                    )}
+                    renderSiteDetails={(site) => <SiteLaunches site={site} />}
                   />
                 </Suspense>
               )}

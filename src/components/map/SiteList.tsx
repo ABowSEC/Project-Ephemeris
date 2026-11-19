@@ -22,7 +22,8 @@ function ShortCountdown({ launch }: { launch: LaunchListItem }) {
   );
 }
 
-function SiteLaunches({ site }: { site: LaunchSite }) {
+/** A site's upcoming launches, also used by the globe's fullscreen panel. */
+export function SiteLaunches({ site }: { site: LaunchSite }) {
   const shown = site.launches.slice(0, EXPANDED_LIMIT);
   return (
     <VStack align="stretch" spacing={0} pb={2}>
